@@ -1,0 +1,10 @@
+.cache/
+imgui.ini
+build/*
+profile*
+gmon.out
+*.bash
+Makefile
+*.make
+external/raylib-5.0/build
+libs/*

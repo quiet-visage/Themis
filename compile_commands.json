@@ -1,0 +1,393 @@
+[
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/alloc.o",
+   "-MF",
+   "obj/debug/tree_sitter/alloc.d",
+   "-c",
+   "external/tree_sitter/src/alloc.c"
+  ],
+  "file": "external/tree_sitter/src/alloc.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/get_changed_ranges.o",
+   "-MF",
+   "obj/debug/tree_sitter/get_changed_ranges.d",
+   "-c",
+   "external/tree_sitter/src/get_changed_ranges.c"
+  ],
+  "file": "external/tree_sitter/src/get_changed_ranges.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/language.o",
+   "-MF",
+   "obj/debug/tree_sitter/language.d",
+   "-c",
+   "external/tree_sitter/src/language.c"
+  ],
+  "file": "external/tree_sitter/src/language.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/lexer.o",
+   "-MF",
+   "obj/debug/tree_sitter/lexer.d",
+   "-c",
+   "external/tree_sitter/src/lexer.c"
+  ],
+  "file": "external/tree_sitter/src/lexer.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/lib.o",
+   "-MF",
+   "obj/debug/tree_sitter/lib.d",
+   "-c",
+   "external/tree_sitter/src/lib.c"
+  ],
+  "file": "external/tree_sitter/src/lib.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/node.o",
+   "-MF",
+   "obj/debug/tree_sitter/node.d",
+   "-c",
+   "external/tree_sitter/src/node.c"
+  ],
+  "file": "external/tree_sitter/src/node.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/parser.o",
+   "-MF",
+   "obj/debug/tree_sitter/parser.d",
+   "-c",
+   "external/tree_sitter/src/parser.c"
+  ],
+  "file": "external/tree_sitter/src/parser.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/query.o",
+   "-MF",
+   "obj/debug/tree_sitter/query.d",
+   "-c",
+   "external/tree_sitter/src/query.c"
+  ],
+  "file": "external/tree_sitter/src/query.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/stack.o",
+   "-MF",
+   "obj/debug/tree_sitter/stack.d",
+   "-c",
+   "external/tree_sitter/src/stack.c"
+  ],
+  "file": "external/tree_sitter/src/stack.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/subtree.o",
+   "-MF",
+   "obj/debug/tree_sitter/subtree.d",
+   "-c",
+   "external/tree_sitter/src/subtree.c"
+  ],
+  "file": "external/tree_sitter/src/subtree.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/tree.o",
+   "-MF",
+   "obj/debug/tree_sitter/tree.d",
+   "-c",
+   "external/tree_sitter/src/tree.c"
+  ],
+  "file": "external/tree_sitter/src/tree.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/tree_cursor.o",
+   "-MF",
+   "obj/debug/tree_sitter/tree_cursor.d",
+   "-c",
+   "external/tree_sitter/src/tree_cursor.c"
+  ],
+  "file": "external/tree_sitter/src/tree_cursor.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter/include",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter/wasm.o",
+   "-MF",
+   "obj/debug/tree_sitter/wasm.d",
+   "-c",
+   "external/tree_sitter/src/wasm.c"
+  ],
+  "file": "external/tree_sitter/src/wasm.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter_json",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter_json/parser.o",
+   "-MF",
+   "obj/debug/tree_sitter_json/parser.d",
+   "-c",
+   "external/tree_sitter_json/parser.c"
+  ],
+  "file": "external/tree_sitter_json/parser.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter_cpp",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter_cpp/parser.o",
+   "-MF",
+   "obj/debug/tree_sitter_cpp/parser.d",
+   "-c",
+   "external/tree_sitter_cpp/parser.c"
+  ],
+  "file": "external/tree_sitter_cpp/parser.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter_cpp",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter_cpp/scanner.o",
+   "-MF",
+   "obj/debug/tree_sitter_cpp/scanner.d",
+   "-c",
+   "external/tree_sitter_cpp/scanner.c"
+  ],
+  "file": "external/tree_sitter_cpp/scanner.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/tree_sitter_c",
+   "-O0",
+   "-g",
+   "-std=c99",
+   "-o",
+   "obj/debug/tree_sitter_c/parser.o",
+   "-MF",
+   "obj/debug/tree_sitter_c/parser.d",
+   "-c",
+   "external/tree_sitter_c/parser.c"
+  ],
+  "file": "external/tree_sitter_c/parser.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/field_fusion",
+   "-I/usr/include/freetype2",
+   "-O0",
+   "-g",
+   "-std=c11",
+   "-Wall",
+   "-Wextra",
+   "-o",
+   "obj/debug/field_fusion/fieldfusion.o",
+   "-MF",
+   "obj/debug/field_fusion/fieldfusion.d",
+   "-c",
+   "external/field_fusion/fieldfusion.c"
+  ],
+  "file": "external/field_fusion/fieldfusion.c"
+ },
+ {
+  "directory": "/home/kxx/progs/themis",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-Iexternal",
+   "-Iexternal/raylib-5.0/build/raylib/include",
+   "-Ihighlighter",
+   "-Iexternal/tree_sitter/include",
+   "-I/usr/include/freetype2",
+   "-Itext",
+   "-Imenu",
+   "-Imotion",
+   "-O0",
+   "-g",
+   "-std=c11",
+   "-Wall",
+   "-Wextra",
+   "-o",
+   "obj/debug/themis/main.o",
+   "-MF",
+   "obj/debug/themis/main.d",
+   "-c",
+   "src/main.c"
+  ],
+  "file": "src/main.c"
+ }
+]
