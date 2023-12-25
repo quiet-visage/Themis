@@ -1,16 +1,17 @@
 #include <field_fusion/fieldfusion.h>
-#include "highlighter/highlighter.h"
-#include <resources/resources.h>
-#include "menu/fuzzy_menu.h"
 #include <raylib.h>
 #include <string.h>
-#include <text/editor.h>
 #include <text/file_editor.h>
 #include <text/text.h>
 #include <uchar.h>
 
+#include "highlighter/highlighter.h"
+#include "menu/fuzzy_menu.h"
+#include "resources/resources.h"
+#include "text/editor.h"
+
 typedef struct {
-    fuzzy_menu_t menu;
+    struct fuzzy_menu menu;
     char dir[256];
     char result[256];
 } file_picker_t;
@@ -24,7 +25,22 @@ void file_picker_reload_options(file_picker_t* fp) {
         size_t name_len = strlen(file_name);
         char32_t option[name_len];
         ff_utf8_to_utf32(option, file_name, name_len);
-        fuzzy_menu_push_option(&fp->menu, option, name_len);
+
+        char file_path[256] = {0};
+        size_t dir_len = strlen(fp->dir);
+        memcpy(file_path, fp->dir, dir_len);
+        memcpy(&file_path[dir_len], "/", 1);
+        memcpy(&file_path[dir_len + 1], file_name, strlen(file_name));
+
+        if (IsPathFile(file_path)) {
+            fuzzy_menu_push_option_with_icon(&fp->menu, option,
+                                             name_len, icon_file_t);
+        } else if (DirectoryExists(file_path)) {
+            fuzzy_menu_push_option_with_icon(&fp->menu, option,
+                                             name_len, icon_folder_t);
+        } else {
+            fuzzy_menu_push_option(&fp->menu, option, name_len);
+        }
     }
     UnloadDirectoryFiles(files);
 }
@@ -55,12 +71,12 @@ void file_picker_up_dir(file_picker_t* fp) {
         if (fp->dir[i] == '/') last_slash_i = i;
     if (last_slash_i < 2) return;
     fp->dir[last_slash_i] = 0;
-    printf("%s\n", fp->dir);
     file_picker_reload_options(fp);
 }
 
 const char* file_picker_perform(file_picker_t* fp,
-                                ff_typography_t typo, bool focused) {
+                                struct ff_typography typo,
+                                bool focused) {
     if (IsKeyDown(KEY_LEFT_ALT) && IsKeyReleased(KEY_COMMA)) {
         file_picker_up_dir(fp);
     }
@@ -81,6 +97,15 @@ const char* file_picker_perform(file_picker_t* fp,
                result_len);
         fp->result[dir_path_len + 1 + result_len] = 0;
 
+        printf("%s\n", fp->result);
+        if (DirectoryExists(fp->result)) {
+            memset(fp->dir, 0, 256);
+            memcpy(fp->dir, fp->result, strlen(fp->result));
+            file_picker_reload_options(fp);
+
+            return NULL;
+        }
+
         return fp->result;
     }
     return NULL;
@@ -90,37 +115,70 @@ void file_picker_destroy(file_picker_t* fp) {
     fuzzy_menu_destroy(&fp->menu);
 }
 
+struct focus {
+    bool picker_enabled;
+    bool picker_focused;
+    bool editor_focused;
+};
+
+void open_file_picker(struct focus* focus) {
+    focus->picker_enabled = true;
+    focus->picker_focused = true;
+    focus->editor_focused = false;
+}
+void close_file_picker(struct focus* focus) {
+    focus->picker_enabled = false;
+    focus->picker_focused = false;
+    focus->editor_focused = true;
+    }
+
 int main(void) {
     InitWindow(800, 800, "Themis");
     resources_init();
     hlr_init();
-    SetTargetFPS(120);
+    SetTargetFPS(72);
 
     ff_initialize("430");
     int maple_mono =
         ff_new_font("/usr/share/fonts/TTF/mplus-2m-regular.ttf",
                     ff_default_font_config());
 
-    file_editor_t fe = file_editor_create();
+    struct file_editor fe = file_editor_create();
     file_editor_open(&fe, __FILE__);
 
     SetExitKey(0);
 
     file_picker_t fp = file_picker_create();
-    ff_typography_t typo = {
+    struct ff_typography typo = {
         .font = maple_mono, .size = 12.f, .color = 0xffffffff};
+
+    struct focus focus = {
+        .picker_enabled = false,
+        .picker_focused = false,
+        .editor_focused = true,
+    };
+
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground((Color){0x1e, 0x1e, 0x2e, 0xff});
 
         editor_draw(&fe.editor, typo, (Rectangle){20, 40, 760, 720},
-                    false);
+                    focus.editor_focused);
         DrawRectangleLinesEx((Rectangle){20, 40, 760, 720}, 1.0f,
                              WHITE);
 
-        const char* result = file_picker_perform(&fp, typo, true);
-        if (result != NULL) {
-            printf("%s\n", result);
+        if (IsKeyReleased(KEY_F1)) {
+            open_file_picker(&focus);
+        }
+
+        if (focus.picker_enabled) {
+            const char* result =
+                file_picker_perform(&fp, typo, focus.picker_focused);
+
+            if (result) {
+                file_editor_open(&fe, result);
+                close_file_picker(&focus);
+            }
         }
 
         EndDrawing();

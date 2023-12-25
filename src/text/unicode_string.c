@@ -6,14 +6,14 @@
 #include <string.h>
 #include <uchar.h>
 
-string32_t string32_create() {
-    string32_t result = {.data = calloc(sizeof(char32_t), 2),
+struct string32 string32_create() {
+    struct string32 result = {.data = calloc(sizeof(char32_t), 2),
                          .size = 0,
                          .capacity = sizeof(char32_t) * 2};
     return result;
 }
 
-void string32_copy_utf8(string32_t* s, const char* buffer,
+void string32_copy_utf8(struct string32* s, const char* buffer,
                         size_t len) {
     size_t required_capacity = sizeof(char32_t) * len;
 
@@ -27,14 +27,14 @@ void string32_copy_utf8(string32_t* s, const char* buffer,
     s->size = len;
 }
 
-void string32_destroy(string32_t* s) {
+void string32_destroy(struct string32* s) {
     free(s->data);
     s->data = 0;
     s->size = 0;
     s->capacity = 0;
 }
 
-void string32_copy(string32_t* s, char32_t* buffer, size_t len) {
+void string32_copy(struct string32* s, char32_t* buffer, size_t len) {
     size_t required_capacity = sizeof(char32_t) * len;
 
     while (required_capacity > s->capacity) {
@@ -48,14 +48,14 @@ void string32_copy(string32_t* s, char32_t* buffer, size_t len) {
     s->data[s->size] = 0;
 }
 
-void string32_delete(string32_t* s, size_t pos, size_t count) {
+void string32_delete(struct string32* s, size_t pos, size_t count) {
     memmove(&s->data[pos], &s->data[pos + count],
             (s->size - pos) * sizeof(char32_t));
     s->size -= count;
     s->data[s->size] = 0;
 }
 
-void string32_insert_buf(string32_t* s, size_t pos, char32_t* str,
+void string32_insert_buf(struct string32* s, size_t pos, char32_t* str,
                          size_t len) {
     assert(pos <= s->size);
     size_t required_capacity = (s->size + len) * sizeof(char32_t);
@@ -73,6 +73,6 @@ void string32_insert_buf(string32_t* s, size_t pos, char32_t* str,
     s->size += len;
 }
 
-void string32_insert_char(string32_t* s, size_t pos, char32_t chr) {
+void string32_insert_char(struct string32* s, size_t pos, char32_t chr) {
     string32_insert_buf(s, pos, &chr, 1);
 }

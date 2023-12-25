@@ -5,33 +5,33 @@
 #include <sys/types.h>
 #include <text/text.h>
 
-typedef enum {
+enum editor_flags {
     editor_flag_none = (0 << 1),
     editor_flag_ignore_enter_t = (1 << 1),
-} editor_flags_t;
+};
 
-typedef struct {
+struct editor_history {
     char32_t* buffer;
     ulong buffer_size;
     ulong cursor_pos;
-} editor_history_t;
+};
 
-typedef struct {
-    editor_history_t* data;
+struct editor_history_stack {
+    struct editor_history* data;
     ulong size;
     ulong capacity;
-} editor_history_stack_t;
+};
 
-typedef struct {
-    editor_history_stack_t undo_stack;
-    editor_history_stack_t redo_stack;
-    position_t cursor;
+struct editor {
+    struct editor_history_stack undo_stack;
+    struct editor_history_stack redo_stack;
+    struct text_position cursor;
     bool cursor_moved;
-    text_t text;
+    struct text text;
     int editor_flags;
-} editor_t;
+};
 
-editor_t editor_create(void);
-void editor_destroy(editor_t* e);
-void editor_draw(editor_t* e, ff_typography_t typo, Rectangle bounds,
-                 bool focused);
+struct editor editor_create(void);
+void editor_destroy(struct editor* e);
+void editor_draw(struct editor* e, struct ff_typography typo,
+                 Rectangle bounds, bool focused);

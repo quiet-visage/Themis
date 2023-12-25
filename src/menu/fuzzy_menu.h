@@ -1,4 +1,6 @@
 #pragma once
+
+#include <resources/resources.h>
 #include <text/editor.h>
 #include <text/unicode_string.h>
 #include <uchar.h>
@@ -6,39 +8,43 @@
 #define FUZZY_MENU_OPTION_NAME_CAP 256
 #define FUZZY_MENU_OPTIONS_CAP 256
 
-typedef struct {
+struct fuzzy_menu_colors {
     int menu_bg;
     int editor_bg;
     int editor_fg;
     int option_fg;
     int option_sel_fg;
     int option_sel_bg;
-} fuzzy_menu_colors_t;
+};
 
-typedef struct {
+struct fuzzy_menu_option {
     char32_t name[FUZZY_MENU_OPTION_NAME_CAP];
     uint edit_distance;
     size_t name_len;
-} fuzzy_menu_option_t;
+    enum icon icon;
+};
 
-typedef struct {
-    editor_t editor;
+struct fuzzy_menu {
+    struct editor editor;
     float vertical_scroll;
-    ff_glyphs_vector_t glyphs;
+    struct ff_glyphs_vector glyphs;
     size_t previous_buffer_size;
     size_t selected;
-    fuzzy_menu_option_t options[FUZZY_MENU_OPTIONS_CAP];
+    struct fuzzy_menu_option options[FUZZY_MENU_OPTIONS_CAP];
     size_t options_count;
-    motion_t motion;
-} fuzzy_menu_t;
+    struct motion motion;
+};
 
-fuzzy_menu_t fuzzy_menu_create();
-void fuzzy_menu_destroy(fuzzy_menu_t *fm);
-void fuzzy_menu_push_option(fuzzy_menu_t *fm, const char32_t *option,
-                            size_t len);
-const char32_t *fuzzy_menu_perform(fuzzy_menu_t *fm,
-                                   ff_typography_t typo,
+struct fuzzy_menu fuzzy_menu_create();
+void fuzzy_menu_destroy(struct fuzzy_menu *fm);
+void fuzzy_menu_push_option(struct fuzzy_menu *fm,
+                            const char32_t *option, size_t len);
+void fuzzy_menu_push_option_with_icon(struct fuzzy_menu *fm,
+                                      const char32_t *option,
+                                      size_t len, enum icon icon);
+const char32_t *fuzzy_menu_perform(struct fuzzy_menu *fm,
+                                   struct ff_typography typo,
                                    bool focused);
-void fuzzy_menu_reset(fuzzy_menu_t *fm);
-void fuzzy_menu_sel_next(fuzzy_menu_t *fm);
-void fuzzy_menu_sel_prev(fuzzy_menu_t *fm);
+void fuzzy_menu_reset(struct fuzzy_menu *fm);
+void fuzzy_menu_sel_next(struct fuzzy_menu *fm);
+void fuzzy_menu_sel_prev(struct fuzzy_menu *fm);

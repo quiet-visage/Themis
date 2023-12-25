@@ -7,15 +7,16 @@
 #include <highlighter/highlighter.h>
 #include <text/text.h>
 #include <text/unicode_string.h>
+#include "file_editor.h"
 
-file_editor_t file_editor_create(void) {
-    file_editor_t result = {.file_path = 0, .editor = editor_create()};
+struct file_editor file_editor_create(void) {
+    struct file_editor result = {.file_path = 0, .editor = editor_create()};
     return result;
 }
 
-void file_editor_destroy(file_editor_t* fe) { editor_destroy(&fe->editor); }
+void file_editor_destroy(struct file_editor* fe) { editor_destroy(&fe->editor); }
 
-void file_editor_open(file_editor_t* fe, const char* file_path) {
+void file_editor_open(struct file_editor* fe, const char* file_path) {
     FILE* file = fopen(file_path, "r");
     assert(file != NULL);
 
@@ -29,13 +30,24 @@ void file_editor_open(file_editor_t* fe, const char* file_path) {
     string32_copy_utf8(&fe->editor.text.buffer, file_contents,
                        file_size);
     free(file_contents);
-    text_set_syntax_language(&fe->editor.text, language_c_t);
+
+    const char* file_extension = GetFileExtension(file_path);
+    if (file_extension) {
+        if (strcmp(".c", file_extension) == 0) {
+            text_set_syntax_language(&fe->editor.text, language_c_t);
+        }else {
+            text_set_syntax_language(&fe->editor.text, language_none_t);
+        }
+    }
+
     text_on_modified(&fe->editor.text);
+    fe->editor.cursor.row = 0;
+    fe->editor.cursor.column = 0;
 
     fclose(file);
 }
 
-void file_editor_save(file_editor_t* fe) {
+void file_editor_save(struct file_editor* fe) {
     assert(fe->file_path != NULL);
     FILE* file = fopen(fe->file_path, "r");
     assert(file != NULL);

@@ -1,12 +1,12 @@
 #pragma once
 #include <text/editor.h>
 
-typedef struct {
+struct file_editor {
     const char* file_path;
-    editor_t editor;
-} file_editor_t;
+    struct editor editor;
+};
 
-file_editor_t file_editor_create(void);
-void file_editor_destroy(file_editor_t* fe);
-void file_editor_open(file_editor_t* fe, const char* file_path);
-void file_editor_save(file_editor_t* fe);
+struct file_editor file_editor_create(void);
+void file_editor_destroy(struct file_editor* fe);
+void file_editor_open(struct file_editor* fe, const char* file_path);
+void file_editor_save(struct file_editor* fe);

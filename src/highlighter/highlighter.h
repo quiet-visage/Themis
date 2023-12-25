@@ -3,17 +3,17 @@
 #include "tree_sitter/src/tree.h"
 typedef unsigned long ulong;
 
-typedef struct {
+struct text_position {
     ulong row;
     ulong column;
-} position_t;
+};
 
-typedef struct {
-    position_t start;
-    position_t end;
-} token_position_t;
+struct token_position {
+    struct text_position start;
+    struct text_position end;
+};
 
-typedef enum {
+enum token_kind {
     token_kind_unknown_t = -1,
     token_kind_keyword_t,
     token_kind_function_t,
@@ -46,40 +46,40 @@ typedef enum {
     token_constant_character_escape_t,
     token_label_t,
     token_kind_count_t
-} token_kind_t;
+};
 
-typedef struct {
-    token_kind_t kind;
-    token_position_t position;
-} token_t;
+struct token {
+    enum token_kind kind;
+    struct token_position position;
+};
 
-typedef struct {
-    token_t* data;
+struct tokens {
+    struct token* data;
     ulong size;
     ulong capacity;
-} tokens_t;
+};
 
-typedef enum {
+enum language {
     language_none_t = -1,
     language_c_t = 0,
     language_cpp_t,
     language_json_t,
     language_count_t
-} language_t;
+};
 
-typedef struct {
+struct highlighter {
     TSTree* tree;
-    language_t language;
-} highlighter_t;
+    enum language language;
+};
 
 void hlr_init();
 void hlr_terminate();
-highlighter_t hlr_highlighter_create(language_t lang,
-                                     const char* buffer,
-                                     size_t buffer_size);
-void hlr_highlighter_destroy(highlighter_t* hlr);
-void hlr_highlighter_update(highlighter_t* hlr, const char* buffer,
-                            size_t buffer_size);
-tokens_t hlr_tokens_create();
-void hlr_tokens_destroy(tokens_t* tokens);
-void hlr_tokens_update(highlighter_t* hlr, tokens_t* ts);
+struct highlighter hlr_highlighter_create(enum language lang,
+                                          const char* buffer,
+                                          size_t buffer_size);
+void hlr_highlighter_destroy(struct highlighter* hlr);
+void hlr_highlighter_update(struct highlighter* hlr,
+                            const char* buffer, size_t buffer_size);
+struct tokens hlr_tokens_create();
+void hlr_tokens_destroy(struct tokens* tokens);
+void hlr_tokens_update(struct highlighter* hlr, struct tokens* ts);
