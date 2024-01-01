@@ -35,7 +35,8 @@ void resources_init(void) {
         assert(FileExists(icon_path));
 
         printf("%s\n", icon_path);
-        Image icon_image = LoadImageSvg(icon_path, ICON_SIZE, ICON_SIZE);
+        Image icon_image =
+            LoadImageSvg(icon_path, ICON_SIZE, ICON_SIZE);
         ImageColorInvert(&icon_image);
         g_icons[i] = LoadTextureFromImage(icon_image);
         UnloadImage(icon_image);

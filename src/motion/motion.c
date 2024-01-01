@@ -16,7 +16,8 @@ struct motion motion_new() {
     return result;
 }
 
-void motion_update(struct motion* m, float target[2], float delta_time) {
+void motion_update(struct motion* m, float target[2],
+                   float delta_time) {
     assert(m->f <= 6.0f);
 
     float k1 = m->z / (pi * m->f);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tree_sitter/src/tree.h"
+
 typedef unsigned long ulong;
 
 struct text_position {
@@ -80,6 +81,7 @@ struct highlighter hlr_highlighter_create(enum language lang,
 void hlr_highlighter_destroy(struct highlighter* hlr);
 void hlr_highlighter_update(struct highlighter* hlr,
                             const char* buffer, size_t buffer_size);
+enum language hlr_get_extension_language(const char* dot_ext);
 struct tokens hlr_tokens_create();
 void hlr_tokens_destroy(struct tokens* tokens);
 void hlr_tokens_update(struct highlighter* hlr, struct tokens* ts);

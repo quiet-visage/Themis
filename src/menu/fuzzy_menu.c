@@ -1,3 +1,6 @@
+#include "fuzzy_menu.h"
+
+#include <config/config.h>
 #include <field_fusion/fieldfusion.h>
 #include <math.h>
 #include <menu/fuzzy_menu.h>
@@ -9,22 +12,11 @@
 #include <stdlib.h>
 #include <text/editor.h>
 #include <uchar.h>
-#include "fuzzy_menu.h"
 
 #define MENU_MIN_WIDTH 124.0f
 #define MENU_PADDING 18.0f
-#define MENU_SPACING 6.0f
 #define MENU_MAX_HEIGHT_PERC 0.55f
 #define MENU_EDITOR_OPTIONS_SPACE 6.0f
-
-static struct fuzzy_menu_colors g_colors = {
-    .menu_bg = 0x313244ff,
-    .editor_bg = 0x585b70ff,
-    .editor_fg = 0xcdd6f4ff,
-    .option_fg = 0xcdd6f4ff,
-    .option_sel_fg = 0xcba6f7ff,
-    .option_sel_bg = 0x6c7086ff,
-};
 
 static Color hex_to_color(int hex) {
     return (Color){.r = (hex >> 24) & 0xffl,
@@ -37,19 +29,36 @@ static uint min(uint a, uint b) { return a < b ? a : b; }
 
 static uint edit_distance(const char32_t* s1, size_t len1,
                           const char32_t* s2, size_t len2) {
-    uint d[len1 + 1][len2 + 1];
+    size_t score = 0;
 
-    d[0][0] = 0;
-    for (unsigned int i = 1; i <= len1; ++i) d[i][0] = i;
-    for (unsigned int i = 1; i <= len2; ++i) d[0][i] = i;
+    for (size_t i = 0; i < len1; i += 1) {
+        if (i >= len2) break;
 
-    for (unsigned int i = 1; i <= len1; ++i)
-        for (unsigned int j = 1; j <= len2; ++j) {
-            d[i][j] = min(
-                min(d[i - 1][j] + 1, d[i][j - 1] + 1),
-                d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1));
+        if (s1[i] == s2[i]) score += 80;
+    }
+
+    for (size_t i = 0; i < len1; i += 1) {
+        for (size_t ii = 0; ii < len2; ii += 1) {
+            if (s1[i] == s2[ii]) score += 1;
         }
-    return d[len1][len2];
+    }
+
+    return score;
+
+    // uint d[len1 + 1][len2 + 1];
+
+    // d[0][0] = 0;
+    // for (unsigned int i = 1; i <= len1; ++i) d[i][0] = i;
+    // for (unsigned int i = 1; i <= len2; ++i) d[0][i] = i;
+
+    // for (unsigned int i = 1; i <= len1; ++i)
+    //     for (unsigned int j = 1; j <= len2; ++j) {
+    //         d[i][j] = min(
+    //             min(d[i - 1][j] + 1, d[i][j - 1] + 1),
+    //             d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 :
+    //             1));
+    //     }
+    // return d[len1][len2];
 }
 
 static size_t char32_str_len(const char32_t* str) {
@@ -67,8 +76,10 @@ static bool is_key_sticky(int key) {
 }
 
 int compare(const void* element_1, const void* element_2) {
-    struct fuzzy_menu_option* a = (struct fuzzy_menu_option*)element_1;
-    struct fuzzy_menu_option* b = (struct fuzzy_menu_option*)element_2;
+    struct fuzzy_menu_option* a =
+        (struct fuzzy_menu_option*)element_1;
+    struct fuzzy_menu_option* b =
+        (struct fuzzy_menu_option*)element_2;
 
     if (a->edit_distance < b->edit_distance) return -1;
     if (a->edit_distance > b->edit_distance) return 1;
@@ -77,14 +88,14 @@ int compare(const void* element_1, const void* element_2) {
 
 struct fuzzy_menu fuzzy_menu_create() {
     struct fuzzy_menu result = {.editor = editor_create(),
-                           .vertical_scroll = 0,
-                           .glyphs = ff_glyphs_vector_create(),
-                           .previous_buffer_size = 0,
-                           .selected = 0,
-                           .options = {0},
-                           .options_count = 0,
-                           .motion = motion_new()};
-    result.editor.editor_flags = editor_flag_ignore_enter_t;
+                                .vertical_scroll = 0,
+                                .glyphs = ff_glyphs_vector_create(),
+                                .previous_buffer_size = 0,
+                                .selected = 0,
+                                .options = {{0}},
+                                .options_count = 0,
+                                .motion = motion_new()};
+    result.editor.editor_flags |= editor_flag_single_line_mode_t;
     result.motion.f = 1.9f;
     result.motion.z = 0.9f;
     return result;
@@ -95,8 +106,9 @@ void fuzzy_menu_destroy(struct fuzzy_menu* fm) {
     ff_glyphs_vector_destroy(&fm->glyphs);
 }
 
-static void fuzzy_menu_auto_scroll(struct fuzzy_menu* fm, float options_y,
-                                   float size, float selected_y,
+static void fuzzy_menu_auto_scroll(struct fuzzy_menu* fm,
+                                   float options_y, float size,
+                                   float selected_y,
                                    float options_height) {
     float cursor_pixel_pos = selected_y;
     // TODO
@@ -137,8 +149,8 @@ static Vector2 center(Vector2 what, Vector2 where) {
                      .y = where.y * 0.5f - what.y * 0.5f};
 }
 
-void fuzzy_menu_push_option(struct fuzzy_menu* fm, const char32_t* option,
-                            size_t len) {
+void fuzzy_menu_push_option(struct fuzzy_menu* fm,
+                            const char32_t* option, size_t len) {
     assert(len < FUZZY_MENU_OPTION_NAME_CAP);
     fm->options[fm->options_count].name_len = len;
     fm->options[fm->options_count].icon = icon_none_t;
@@ -158,8 +170,8 @@ void fuzzy_menu_push_option_with_icon(struct fuzzy_menu* fm,
     assert(fm->options_count < FUZZY_MENU_OPTIONS_CAP);
 }
 
-static void qs_options(struct fuzzy_menu_option options[], int low,
-                       int high) {
+static void quick_sort_options(struct fuzzy_menu_option options[],
+                               int low, int high) {
     if (low < high) {
         struct fuzzy_menu_option pivot = options[(
             size_t)((low + high) * 0.5f)];  // Selecting the middle
@@ -168,10 +180,10 @@ static void qs_options(struct fuzzy_menu_option options[], int low,
         int j = high;
 
         while (i <= j) {
-            while (options[i].edit_distance < pivot.edit_distance)
+            while (options[i].edit_distance > pivot.edit_distance)
                 i++;  // Moving elements smaller than pivot to the
                       // left
-            while (options[j].edit_distance > pivot.edit_distance)
+            while (options[j].edit_distance < pivot.edit_distance)
                 j--;  // Moving elements greater than pivot to the
                       // right
 
@@ -187,33 +199,12 @@ static void qs_options(struct fuzzy_menu_option options[], int low,
         }
 
         // Recursively sort the two partitions
-        if (low < j) qs_options(options, low, j);
-        if (i < high) qs_options(options, i, high);
+        if (low < j) quick_sort_options(options, low, j);
+        if (i < high) quick_sort_options(options, i, high);
     }
 }
 
-struct fuzzy_menu_dimensions{
-    float bg_x;
-    float bg_width;
-
-    float bounds_x;
-    float bounds_width;
-
-    float editor_y;
-    float editor_bg_y;
-
-    float options_x;
-    float options_y;
-    float options_bg_y;
-
-    float editor_height;
-    float editor_bg_height;
-
-    float options_height;
-    float options_bg_height;
-};
-
-bool fuzzy_menu_icons_enabled(struct fuzzy_menu* fm) {
+static bool fuzzy_menu_icons_enabled(struct fuzzy_menu* fm) {
     for (size_t i = 0; i < fm->options_count; i += 1)
         if (fm->options[i].icon != icon_none_t) return true;
 
@@ -225,8 +216,8 @@ struct fuzzy_menu_dimensions fuzzy_menu_get_dimensions(
     Vector2 window_size) {
     struct fuzzy_menu_dimensions result = {0};
 
-    const float total_padding = MENU_PADDING * 2;
-    const float total_spacing = MENU_SPACING * 2;
+    const float total_padding = g_layout.padding * 2;
+    const float total_spacing = g_layout.gap * 2;
 
     result.bounds_width =
         largest_string_width(fm->options_count, fm->options, typo);
@@ -235,23 +226,24 @@ struct fuzzy_menu_dimensions fuzzy_menu_get_dimensions(
     }
     result.bounds_width = fmaxf(result.bounds_width, MENU_MIN_WIDTH);
 
-    result.bg_width = result.bounds_width + MENU_PADDING * 2;
+    result.bg_width = result.bounds_width + g_layout.padding * 2;
     result.bg_x = window_size.x * .5f - result.bounds_width * .5f;
-    result.bounds_x = result.bg_x + MENU_PADDING;
+    result.bounds_x = result.bg_x + g_layout.padding;
     result.options_x = result.bounds_x;
     if (fuzzy_menu_icons_enabled(fm)) {
         result.options_x += 24;  // icon size + spacing
     }
 
     result.editor_height = typo.size + 4;
-    result.editor_bg_height = result.editor_height + MENU_PADDING;
+    result.editor_bg_height =
+        result.editor_height + g_layout.padding * 2;
 
     result.options_height =
-        (typo.size + MENU_SPACING) * fm->options_count;
+        (typo.size + g_layout.gap) * fm->options_count;
     result.options_height = fminf(
         result.options_height, window_size.y * MENU_MAX_HEIGHT_PERC);
     result.options_bg_height =
-        result.options_height + MENU_PADDING * 2;
+        result.options_height + g_layout.padding * 2;
 
     result.editor_bg_y =
         window_size.y * .5f -
@@ -263,76 +255,63 @@ struct fuzzy_menu_dimensions fuzzy_menu_get_dimensions(
     result.options_bg_y = result.editor_bg_y +
                           result.editor_bg_height +
                           MENU_EDITOR_OPTIONS_SPACE;
-    result.options_y = result.options_bg_y + MENU_PADDING;
+    result.options_y = result.options_bg_y + g_layout.padding;
 
     return result;
 }
 
-const char32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
-                                   struct ff_typography typo,
-                                   bool focused) {
-    const Vector2 window_size = {.x = GetScreenWidth(),
-                                 .y = GetScreenHeight()};
-    struct fuzzy_menu_dimensions dimensions =
-        fuzzy_menu_get_dimensions(fm, typo, window_size);
-
+void fuzzy_menu_draw_editor(struct fuzzy_menu* fm,
+                            struct ff_typography typo,
+                            int focus_flags,
+                            struct fuzzy_menu_dimensions dimensions) {
+    Rectangle editor_bg_rec = {.x = dimensions.bg_x,
+                               .y = dimensions.editor_bg_y,
+                               .width = dimensions.bg_width,
+                               .height = dimensions.editor_bg_height};
     Rectangle editor_rec = {.x = dimensions.bounds_x,
                             .y = dimensions.editor_y,
                             .width = dimensions.bounds_width,
                             .height = dimensions.editor_height};
 
-    Rectangle editor_bg_rec = {.x = dimensions.bg_x,
-                               .y = dimensions.editor_bg_y,
-                               .width = dimensions.bg_width,
-                               .height = dimensions.editor_bg_height};
+    DrawRectangleRec(editor_bg_rec,
+                     hex_to_color(g_color_scheme.surface0_bg));
 
+    BeginScissorMode(editor_rec.x, editor_rec.y, editor_rec.width,
+                     editor_rec.height);
+    editor_draw(&fm->editor, typo, editor_rec,
+                focus_flags);  // NOTE: FIX HORZ SCROLL
+    EndScissorMode();
+}
+
+void fuzzy_menu_draw_options(
+    struct fuzzy_menu* fm, struct ff_typography typo,
+    struct fuzzy_menu_dimensions dimensions) {
     Rectangle options_rec = {.x = dimensions.options_x,
                              .y = dimensions.options_y,
                              .width = dimensions.bounds_width,
                              .height = dimensions.options_height};
-
     Rectangle options_bg_rec = {
         .x = dimensions.bg_x,
         .y = dimensions.options_bg_y,
         .width = dimensions.bg_width,
         .height = dimensions.options_bg_height};
 
-    DrawRectangleRec(editor_bg_rec, hex_to_color(g_colors.editor_bg));
-    DrawRectangleRec(options_bg_rec, hex_to_color(g_colors.menu_bg));
-    rlDrawRenderBatchActive();
+    DrawRectangleRec(options_bg_rec,
+                     hex_to_color(g_color_scheme.surface0_bg));
 
-    BeginScissorMode(editor_rec.x, editor_rec.y, editor_rec.width,
-                     editor_rec.height);
-    editor_draw(&fm->editor, typo, editor_rec,
-                focused);  // NOTE: FIX HORZ SCROLL
-    EndScissorMode();
-
-    bool buffer_changed =
-        fm->editor.text.buffer.size != fm->previous_buffer_size;
-    if (buffer_changed) {
-        for (size_t i = 0; i < fm->options_count; i += 1) {
-            fm->options[i].edit_distance = edit_distance(
-                fm->editor.text.buffer.data,
-                fm->editor.text.buffer.size, fm->options[i].name,
-                fm->options[i].name_len);
-        }
-        qs_options(fm->options, 0, fm->options_count - 1);
-        fm->previous_buffer_size = fm->editor.text.buffer.size;
-        fm->selected = 0;
-    }
-
-    BeginScissorMode(dimensions.bounds_x, options_rec.y, options_rec.width,
-                     options_rec.height);
+    BeginScissorMode(dimensions.bounds_x, options_rec.y,
+                     options_rec.width, options_rec.height);
     Camera2D cam = {0};
     cam.zoom = 1.0f;
     cam.offset.y = -fm->motion.position[0];
     BeginMode2D(cam);
-    DrawRectangle(dimensions.bounds_x - MENU_PADDING * .5f,
-                  fm->motion.position[1] - MENU_SPACING,
-                  options_rec.width + MENU_PADDING,
-                  typo.size + MENU_SPACING * 2,
-                  hex_to_color(g_colors.option_sel_bg));
+    DrawRectangle(dimensions.bounds_x - g_layout.padding * .5f,
+                  fm->motion.position[1] - g_layout.gap,
+                  options_rec.width + g_layout.padding,
+                  typo.size + g_layout.gap * 2,
+                  hex_to_color(g_color_scheme.selected_bg));
     EndMode2D();
+
     ff_glyphs_vector_clear(&fm->glyphs);
     float selected_y = 0;
     float option_y = options_rec.y;
@@ -340,8 +319,8 @@ const char32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
         if (i == fm->selected) selected_y = option_y;
 
         struct ff_position draw_position = {options_rec.x, option_y};
-        typo.color = i == fm->selected ? g_colors.option_sel_fg
-                                       : g_colors.option_fg;
+        typo.color = i == fm->selected ? g_color_scheme.selected_fg
+                                       : g_color_scheme.fg;
         ff_print_utf32(
             &fm->glyphs,
             (struct ff_utf32_str){
@@ -364,13 +343,16 @@ const char32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
                               icon.width,
                               icon.height};
             Vector2 origin = {.x = 0, .y = 0};
+
             BeginMode2D(cam);
-            DrawTexturePro(icon, source, dest, origin, 0, hex_to_color(g_colors.option_fg));
+            DrawTexturePro(icon, source, dest, origin, 0,
+                           hex_to_color(g_color_scheme.fg));
             EndMode2D();
         }
 
-        option_y += typo.size + MENU_SPACING * 2;
+        option_y += typo.size + g_layout.gap * 2;
     }
+
     fuzzy_menu_auto_scroll(fm, options_rec.y, typo.size,
                            selected_y + typo.size,
                            options_rec.height);
@@ -385,20 +367,77 @@ const char32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
             fm->motion.position[0], -1, 1},
         projection);
 
-
     ff_draw(typo.font, fm->glyphs.data, fm->glyphs.size,
             (float*)projection);
     EndScissorMode();
+}
 
-    if (focused) {
-        if (is_key_sticky(KEY_DOWN) &&
-            (fm->selected + 1) < fm->options_count)
-            fm->selected += 1;
-        if (is_key_sticky(KEY_UP) && fm->selected > 0)
-            fm->selected -= 1;
-        if (IsKeyReleased(KEY_ENTER))
-            return fm->options[fm->selected].name;
+void fuzzy_menu_sel_next(struct fuzzy_menu *fm) {
+    if (fm->selected < fm->options_count-1) fm->selected +=1;    
+}
+
+void fuzzy_menu_sel_prev(struct fuzzy_menu *fm) {
+    if (fm->selected > 0) fm->selected -=1;    
+}
+
+const char32_t* fuzzy_menu_handle_interactions(
+    struct fuzzy_menu* fm) {
+    if (is_key_sticky(KEY_DOWN)) {
+        fuzzy_menu_sel_next(fm);
+        return NULL;
     }
+    if (is_key_sticky(KEY_UP)) fuzzy_menu_sel_prev(fm);
+    if (IsKeyReleased(KEY_ENTER)) {
+        editor_clear(&fm->editor);
+        return fm->options[fm->selected].name;
+    }
+
+    if (IsKeyDown(KEY_LEFT_CONTROL)) {
+        if (is_key_sticky(KEY_N)) {
+            fuzzy_menu_sel_next(fm);
+            return NULL;
+        };
+        if (is_key_sticky(KEY_P)) {
+            fuzzy_menu_sel_prev(fm);
+            return NULL;
+        };
+    }
+
+    return NULL;
+}
+
+bool fuzzy_menu_buffer_changed(struct fuzzy_menu* fm) {
+    return fm->editor.text.buffer.size != fm->previous_buffer_size;
+}
+
+void fuzzy_menu_on_buffer_change(struct fuzzy_menu* fm) {
+    for (size_t i = 0; i < fm->options_count; i += 1) {
+        fm->options[i].edit_distance = edit_distance(
+            fm->editor.text.buffer.data, fm->editor.text.buffer.size,
+            fm->options[i].name, fm->options[i].name_len);
+    }
+    quick_sort_options(fm->options, 0, fm->options_count - 1);
+    fm->previous_buffer_size = fm->editor.text.buffer.size;
+    fm->selected = 0;
+}
+
+const char32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
+                                   struct ff_typography typo,
+                                   int focus_flags) {
+    const Vector2 window_size = {.x = GetScreenWidth(),
+                                 .y = GetScreenHeight()};
+
+    struct fuzzy_menu_dimensions dimensions =
+        fuzzy_menu_get_dimensions(fm, typo, window_size);
+
+    fuzzy_menu_draw_editor(fm, typo, focus_flags, dimensions);
+    fuzzy_menu_draw_options(fm, typo, dimensions);
+
+    if (fuzzy_menu_buffer_changed(fm))
+        fuzzy_menu_on_buffer_change(fm);
+
+    if (focus_flags & focus_flag_can_interact)
+        return fuzzy_menu_handle_interactions(fm);
 
     return NULL;
 }

@@ -5,55 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "serialization_map.h"
 #include "tree_sitter/api.h"
 #include "tree_sitter/parser.h"
-
-typedef struct {
-    const char *key;
-    enum token_kind value;
-} ht_pair_t;
-
-typedef struct {
-    ht_pair_t *entries;
-} ht_t;
-
-static size_t cooked_hash(const char *str, size_t str_len) {
-    static const size_t max_len = 26;
-    size_t len = max_len < str_len ? max_len : str_len;
-    size_t hash = 0xcbf29ce484222325;
-    for (size_t i = 0; i < len; i += 1) {
-        hash *= 0x100000001b3;
-        hash ^= str[i];
-    }
-    return hash;
-}
-static const size_t ht_table_size = 5096;
-static ht_t ht_create() {
-    ht_t hashtable = {0};
-    hashtable.entries = calloc(ht_table_size, sizeof(ht_pair_t));
-    return hashtable;
-}
-
-static void ht_destroy(ht_t *ht) {
-    free(ht->entries);
-    ht->entries = 0;
-}
-
-static void ht_set(ht_t *ht, const char *key,
-                   enum token_kind value) {
-    unsigned int slot = cooked_hash(key, strlen(key)) % ht_table_size;
-    assert(ht->entries[slot].value == 0 && "collision happened");
-    ht->entries[slot] = (ht_pair_t){.key = key, .value = value};
-}
-
-static enum token_kind ht_get_value(ht_t *ht, const char *key,
-                                      size_t key_len) {
-    unsigned int slot = cooked_hash(key, key_len) % ht_table_size;
-    ht_pair_t result = ht->entries[slot];
-    assert(result.key != 0 &&
-           "token string does not have equivalent enum");
-    return result.value;
-}
 
 typedef struct {
     char *source;
@@ -73,7 +27,8 @@ static TSLanguage *g_languages[language_count_t] = {0};
 static query_source_t g_querie_sources[language_count_t] = {0};
 static TSQuery *g_queries[language_count_t] = {0};
 static TSParser *g_parser = {0};
-static ht_t g_token_enum_map = {0};
+static struct serialization_map g_token_map = {0};
+static struct serialization_map g_extension_map = {0};
 
 static void load_query(enum language lang) {
     TSQueryError error;
@@ -97,54 +52,46 @@ void hlr_init() {
     }
 
     g_parser = ts_parser_new();
+    g_token_map = serialization_map_create();
 
-    g_token_enum_map = ht_create();
-    ht_set(&g_token_enum_map, "keyword", token_kind_keyword_t);
-    ht_set(&g_token_enum_map, "function", token_kind_function_t);
-    ht_set(&g_token_enum_map, "string", token_kind_string_t);
-    ht_set(&g_token_enum_map, "number", token_kind_number_t);
-    ht_set(&g_token_enum_map, "operator", token_kind_operator_t);
-    ht_set(&g_token_enum_map, "type", token_kind_type_t);
-    ht_set(&g_token_enum_map, "constant", token_kind_constant_t);
-    ht_set(&g_token_enum_map, "constant.numeric",
-           token_kind_constant_numeric_t);
-    ht_set(&g_token_enum_map, "variable", token_kind_variable_t);
-    ht_set(&g_token_enum_map, "variable.parameter",
-           token_kind_variable_parameter_t);
-    ht_set(&g_token_enum_map, "variable.other.member",
-           token_kind_variable_other_member_t);
-    ht_set(&g_token_enum_map, "delimiter", token_kind_delimiter_t);
-    ht_set(&g_token_enum_map, "property", token_kind_property_t);
-    ht_set(&g_token_enum_map, "comment", token_kind_comment_t);
-    ht_set(&g_token_enum_map, "keyword.directive",
-           token_kind_keyword_directive_t);
-    ht_set(&g_token_enum_map, "keyword.control.return",
-           token_keyword_control_return_t);
-    ht_set(&g_token_enum_map, "keyword.control.conditional",
-           token_keyword_control_conditional_t);
-    ht_set(&g_token_enum_map, "keyword.control.repeat",
-           token_keyword_control_repeat_t);
-    ht_set(&g_token_enum_map, "keyword.storage.type",
-           token_keyword_storage_type_t);
-    ht_set(&g_token_enum_map, "keyword.storage.modifier",
-           token_keyword_storage_modifier_t);
-    ht_set(&g_token_enum_map, "keyword.control",
-           token_keyword_control_t);
-    ht_set(&g_token_enum_map, "type.builtin", token_type_builtin_t);
-    ht_set(&g_token_enum_map, "punctuation", token_punctuation_t);
-    ht_set(&g_token_enum_map, "punctuation.delimiter",
-           token_punctuation_delimiter_t);
-    ht_set(&g_token_enum_map, "punctuation.bracket",
-           token_punctuation_bracket_t);
-    ht_set(&g_token_enum_map, "constant.builtin.boolean",
-           token_constant_builtin_boolean_t);
-    ht_set(&g_token_enum_map, "type.enum.variant",
-           token_type_enum_variant_t);
-    ht_set(&g_token_enum_map, "constant.character",
-           token_constant_character_t);
-    ht_set(&g_token_enum_map, "constant.character.escape",
-           token_constant_character_escape_t);
-    ht_set(&g_token_enum_map, "label", token_label_t);
+    // clang-format off
+    serialization_map_set(&g_token_map, "keyword", token_kind_keyword_t);
+    serialization_map_set(&g_token_map, "function", token_kind_function_t);
+    serialization_map_set(&g_token_map, "string", token_kind_string_t);
+    serialization_map_set(&g_token_map, "number", token_kind_number_t);
+    serialization_map_set(&g_token_map, "operator", token_kind_operator_t);
+    serialization_map_set(&g_token_map, "type", token_kind_type_t);
+    serialization_map_set(&g_token_map, "constant", token_kind_constant_t);
+    serialization_map_set(&g_token_map, "constant.numeric", token_kind_constant_numeric_t);
+    serialization_map_set(&g_token_map, "variable", token_kind_variable_t);
+    serialization_map_set(&g_token_map, "variable.parameter", token_kind_variable_parameter_t);
+    serialization_map_set(&g_token_map, "variable.other.member", token_kind_variable_other_member_t);
+    serialization_map_set(&g_token_map, "delimiter", token_kind_delimiter_t);
+    serialization_map_set(&g_token_map, "property", token_kind_property_t);
+    serialization_map_set(&g_token_map, "comment", token_kind_comment_t);
+    serialization_map_set(&g_token_map, "keyword.directive", token_kind_keyword_directive_t);
+    serialization_map_set(&g_token_map, "keyword.control.return", token_keyword_control_return_t);
+    serialization_map_set(&g_token_map, "keyword.control.conditional", token_keyword_control_conditional_t);
+    serialization_map_set(&g_token_map, "keyword.control.repeat", token_keyword_control_repeat_t);
+    serialization_map_set(&g_token_map, "keyword.storage.type", token_keyword_storage_type_t);
+    serialization_map_set(&g_token_map, "keyword.storage.modifier", token_keyword_storage_modifier_t);
+    serialization_map_set(&g_token_map, "keyword.control", token_keyword_control_t);
+    serialization_map_set(&g_token_map, "type.builtin", token_type_builtin_t);
+    serialization_map_set(&g_token_map, "punctuation", token_punctuation_t);
+    serialization_map_set(&g_token_map, "punctuation.delimiter", token_punctuation_delimiter_t);
+    serialization_map_set(&g_token_map, "punctuation.bracket", token_punctuation_bracket_t);
+    serialization_map_set(&g_token_map, "constant.builtin.boolean", token_constant_builtin_boolean_t);
+    serialization_map_set(&g_token_map, "type.enum.variant", token_type_enum_variant_t);
+    serialization_map_set(&g_token_map, "constant.character", token_constant_character_t);
+    serialization_map_set(&g_token_map, "constant.character.escape", token_constant_character_escape_t);
+    serialization_map_set(&g_token_map, "label", token_label_t);
+
+    g_extension_map = serialization_map_create();
+    serialization_map_set(&g_extension_map, ".c", language_c_t);
+    serialization_map_set(&g_extension_map, ".h", language_c_t);
+    serialization_map_set(&g_extension_map, ".cpp", language_cpp_t);
+    serialization_map_set(&g_extension_map, ".json", language_json_t);
+    // clang-format on
 }
 
 void hlr_terminate() {
@@ -152,7 +99,8 @@ void hlr_terminate() {
         ts_query_delete(g_queries[i]);
     }
     ts_parser_delete(g_parser);
-    ht_destroy(&g_token_enum_map);
+    serialization_map_destroy(&g_token_map);
+    serialization_map_destroy(&g_extension_map);
 }
 
 struct tokens hlr_tokens_create() {
@@ -181,8 +129,8 @@ static void tokens_push(struct tokens *o, struct token token) {
 };
 
 struct highlighter hlr_highlighter_create(enum language lang,
-                                            const char *buffer,
-                                            size_t buffer_size) {
+                                          const char *buffer,
+                                          size_t buffer_size) {
     if (buffer_size == 0)
         return (struct highlighter){.tree = 0, .language = lang};
     ts_parser_set_language(g_parser, g_languages[lang]);
@@ -203,8 +151,7 @@ void hlr_highlighter_update(struct highlighter *hlr,
         ts_parser_parse_string(g_parser, NULL, buffer, buffer_size);
 }
 
-void hlr_tokens_update(struct highlighter *hlr,
-                       struct tokens *ts) {
+void hlr_tokens_update(struct highlighter *hlr, struct tokens *ts) {
     assert(hlr->language != language_none_t);
     assert(hlr->tree != NULL);
     hlr_tokens_reset(ts);
@@ -224,8 +171,8 @@ void hlr_tokens_update(struct highlighter *hlr,
             &name_length);
 
         struct token token = {
-            .kind =
-                ht_get_value(&g_token_enum_map, name, name_length),
+            .kind = serialization_map_get(&g_token_map, name,
+                                          name_length),
             .position = {
                 .start = {.row = start.row, .column = start.column},
                 .end = {.row = end.row, .column = end.column}}};
@@ -233,6 +180,11 @@ void hlr_tokens_update(struct highlighter *hlr,
     }
 
     ts_query_cursor_delete(cursor);
+}
+
+enum language hlr_get_extension_language(const char *dot_ext) {
+    return serialization_map_get(&g_extension_map, dot_ext,
+                                 strlen(dot_ext));
 }
 
 void hlr_tokens_destroy(struct tokens *tokens) {

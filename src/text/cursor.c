@@ -1,14 +1,14 @@
+#include <math.h>
+#include <motion/motion.h>
 #include <text/cursor.h>
 
-#include <math.h>
-
-#include <motion/motion.h>
 #include "raylib.h"
 
 struct cursor cursor_new() {
     struct cursor result = {0};
-    result.motion.f = 3.0f;
-    result.motion.z = 0.9f;
+    result.motion.f = 2.5f;
+    result.motion.z = 1.0f;
+    result.motion.r = -1.0f;
     return result;
 }
 

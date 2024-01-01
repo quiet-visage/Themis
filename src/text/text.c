@@ -1,4 +1,7 @@
+#include "text.h"
+
 #include <assert.h>
+#include <config/config.h>
 #include <field_fusion/fieldfusion.h>
 #include <highlighter/highlighter.h>
 #include <motion/motion.h>
@@ -11,65 +14,9 @@
 #include <text/text.h>
 #include <text/unicode_string.h>
 #include <uchar.h>
-#include "text.h"
-
-static const int rosewater = 0xf5e0dcff;
-static const int flamingo = 0xf2cdcdff;
-static const int pink = 0xf5c2e7ff;
-static const int mauve = 0xcba6f7ff;
-static const int red = 0xf38ba8ff;
-static const int maroon = 0xeba0acff;
-static const int peach = 0xfab387ff;
-static const int yellow = 0xf9e2afff;
-static const int green = 0xa6e3a1ff;
-static const int teal = 0x94e2d5ff;
-static const int sky = 0x89dcebff;
-static const int sapphire = 0x74c7ecff;
-static const int blue = 0x89b4faff;
-static const int lavender = 0xb4befeff;
-static const int text = 0xcdd6f4ff;
-static const int overlay2 = 0x9399b2ff;
-static const int overlay0 = 0x6c7086ff;
-static const float spacing = 6.0f;
-
-static struct text_colors g_colors = {
-    .foreground = 0xcdd6f4ff,
-    .syntax = {
-        [token_kind_keyword_t] = mauve,
-        [token_kind_function_t] = blue,
-        [token_kind_string_t] = green,
-        [token_kind_number_t] = peach,
-        [token_kind_operator_t] = sky,
-        [token_kind_type_t] = yellow,
-        [token_kind_constant_t] = text,
-        [token_kind_constant_numeric_t] = peach,
-        [token_kind_variable_t] = text,
-        [token_kind_variable_parameter_t] = maroon,
-        [token_kind_variable_other_member_t] = text,
-        [token_kind_delimiter_t] = overlay2,
-        [token_kind_property_t] = teal,
-        [token_kind_comment_t] = overlay0,
-        [token_kind_keyword_directive_t] = mauve,
-        [token_keyword_control_return_t] = mauve,
-        [token_keyword_control_conditional_t] = mauve,
-        [token_keyword_control_repeat_t] = mauve,
-        [token_keyword_storage_type_t] = yellow,
-        [token_keyword_storage_modifier_t] = mauve,
-        [token_keyword_control_t] = mauve,
-        [token_type_builtin_t] = red,
-        [token_punctuation_t] = overlay2,
-        [token_punctuation_delimiter_t] = overlay2,
-        [token_punctuation_bracket_t] = overlay2,
-        [token_constant_builtin_boolean_t] = peach,
-        [token_type_enum_variant_t] = yellow,
-        [token_constant_character_t] = peach,
-        [token_constant_character_escape_t] = pink,
-        [token_label_t] = mauve,
-
-    }};
 
 static float font_space(float font_size) {
-    return font_size + spacing;
+    return font_size + g_layout.text_spacing;
 }
 ulong line_length(struct line line) { return line.end - line.start; }
 struct lines_vector lines_vector_create() {
@@ -106,7 +53,8 @@ struct text text_create() {
     struct text result = {0};
     result.scroll_motion = motion_new();
     result.scroll_motion.f = 1.5f;
-    result.scroll_motion.z = 0.8f;
+    result.scroll_motion.z = 1.0f;
+    result.scroll_motion.r = -1.f;
     result.glyphs = ff_glyphs_vector_create();
     result.lines = lines_vector_create();
     result.buffer = string32_create();
@@ -139,13 +87,14 @@ void text_update_lines(struct text* t) {
     for (ulong i = 0; i < t->buffer.size; i += 1) {
         if (t->buffer.data[i] != '\n') continue;
         line_end = i;
-        lines_vector_push(&t->lines, (struct line){.start = line_start,
-                                              .end = line_end});
+        lines_vector_push(
+            &t->lines,
+            (struct line){.start = line_start, .end = line_end});
         line_start = i + 1;
     }
     line_end = t->buffer.size;
-    lines_vector_push(&t->lines,
-                      (struct line){.start = line_start, .end = line_end});
+    lines_vector_push(&t->lines, (struct line){.start = line_start,
+                                               .end = line_end});
 }
 
 void text_update_syntax_tree(struct text* t) {
@@ -170,8 +119,8 @@ static void utf32_substr(char32_t* dest, char32_t* src, ulong len) {
 }
 
 static int get_token_color(enum token_kind kind) {
-    if (kind == token_kind_unknown_t) return g_colors.foreground;
-    return g_colors.syntax[kind];
+    if (kind == token_kind_unknown_t) return g_color_scheme.fg;
+    return g_color_scheme.syntax[kind];
 }
 
 static void highlight_glyph_line(struct text* t, size_t* token_index,
@@ -239,17 +188,18 @@ void text_update_glyphs(struct text* t, struct ff_typography typo,
     }
 }
 
-bool text_is_line_below_view(struct text* t, struct ff_typography typo,
+bool text_is_line_below_view(struct text* t,
+                             struct ff_typography typo,
                              Rectangle bounds, ulong line) {
     line -= line == 0 ? 0 : 1;
     float line_pixel_position =
-        typo.size * line + typo.size + spacing * line;
+        typo.size * line + typo.size + g_layout.text_spacing * line;
     float bottom = bounds.height + t->scroll_motion.position[1];
     return line_pixel_position > bottom;
 }
 
-bool text_is_line_above_view(struct text* t, struct ff_typography typo,
-                             ulong line) {
+bool text_is_line_above_view(struct text* t,
+                             struct ff_typography typo, ulong line) {
     line += 1;
     float line_pixel_pos = line * font_space(typo.size);
     float top = t->scroll_motion.position[1];
@@ -287,7 +237,10 @@ void text_select(struct text* t, struct selection sel) {
     ulong to = to_line_index + sel.to_col;
     ulong selection_char_count = to - from;
 
-    if (selection_char_count > 0) t->has_selection = true;
+    if (selection_char_count > 0)
+        t->has_selection = true;
+    else
+        t->has_selection = false;
 }
 
 ulong text_get_mouse_hover_line(struct text* t, float font_size,
@@ -295,8 +248,8 @@ ulong text_get_mouse_hover_line(struct text* t, float font_size,
     ulong result = 0;
     mouse.y += t->scroll_motion.position[1];
     for (size_t i = 0; i < t->lines.size; i += 1) {
-        float line_y =
-            i * font_size + y_offset + font_size + i * spacing;
+        float line_y = i * font_size + y_offset + font_size +
+                       i * g_layout.text_spacing;
         bool mouse_is_in_this_line = line_y > mouse.y;
         if (!mouse_is_in_this_line) continue;
         result = i;
@@ -305,7 +258,8 @@ ulong text_get_mouse_hover_line(struct text* t, float font_size,
     return result;
 }
 
-ulong text_get_mouse_hover_col(struct text* t, struct ff_typography typo,
+ulong text_get_mouse_hover_col(struct text* t,
+                               struct ff_typography typo,
                                Vector2 mouse, float x_offset,
                                ulong hovering_line) {
     assert(hovering_line < t->lines.size);
@@ -354,11 +308,11 @@ void text_handle_mouse(struct text* t, struct ff_typography typo,
             text_get_mouse_hover_line(t, typo.size, mouse, bounds.y);
         ulong end_mouse_press_col = text_get_mouse_hover_col(
             t, typo, mouse, bounds.x, end_mouse_press_line);
-        text_select(
-            t, (struct selection){.from_line = t->mouse_press_start_line,
-                             .from_col = t->mouse_press_start_col,
-                             .to_line = end_mouse_press_line,
-                             .to_col = end_mouse_press_col});
+        text_select(t, (struct selection){
+                           .from_line = t->mouse_press_start_line,
+                           .from_col = t->mouse_press_start_col,
+                           .to_line = end_mouse_press_line,
+                           .to_col = end_mouse_press_col});
         return;
     }
 
@@ -367,8 +321,10 @@ void text_handle_mouse(struct text* t, struct ff_typography typo,
         t->mouse_was_pressed = false;
 }
 
-void text_scroll_with_cursor(struct text* t, struct ff_typography typo,
-                             Rectangle bounds, struct text_position curs_pos) {
+void text_scroll_with_cursor(struct text* t,
+                             struct ff_typography typo,
+                             Rectangle bounds,
+                             struct text_position curs_pos) {
     float glyph_offset = font_space(typo.size);
     {  // bottom scroll
         float cursor_pixel_position =
@@ -426,8 +382,10 @@ void text_scroll_with_wheel(struct text* t, struct ff_typography typo,
                              bounds.height * 0.5f;
 }
 
-static float text_get_cursor_x(struct text* t, struct ff_typography typo,
-                               Rectangle bounds, struct text_position pos) {
+static float text_get_cursor_x(struct text* t,
+                               struct ff_typography typo,
+                               Rectangle bounds,
+                               struct text_position pos) {
     if (pos.column == 0) return bounds.x;
 
     struct line cursor_line = t->lines.data[pos.row];
@@ -486,7 +444,8 @@ static void text_draw_single_line_selection(struct text* t,
     DrawRectangleRec(selected_area, GRAY);
 }
 
-static void text_draw_selection(struct text* t, struct ff_typography typo,
+static void text_draw_selection(struct text* t,
+                                struct ff_typography typo,
                                 Rectangle bounds) {
     assert(t->has_selection);
 
@@ -553,8 +512,11 @@ static void text_draw_selection(struct text* t, struct ff_typography typo,
 }
 
 void text_draw(struct text* t, struct ff_typography typo,
-               Rectangle bounds) {
-    text_scroll_with_wheel(t, typo, bounds);
+               Rectangle bounds, int focus_flags) {
+    if ((focus_flags & focus_flag_can_scroll) &&
+        CheckCollisionPointRec(GetMousePosition(), bounds))
+        text_scroll_with_wheel(t, typo, bounds);
+
     motion_update(
         &t->scroll_motion,
         (float[2]){t->scroll.horizontal, t->scroll.vertical},
@@ -570,8 +532,9 @@ void text_draw(struct text* t, struct ff_typography typo,
     struct ff_ortho_params projection_params = {
         .scr_left = 0,
         .scr_right = GetScreenWidth(),
-        .scr_bottom = GetScreenHeight(),
-        .scr_top = 0,
+        .scr_bottom =
+            GetScreenHeight() + t->scroll_motion.position[1],
+        .scr_top = t->scroll_motion.position[1],
         .near = -1.0f,
         .far = 1.0f};
     ff_get_ortho_projection(projection_params, projection);
@@ -581,13 +544,15 @@ void text_draw(struct text* t, struct ff_typography typo,
 
 void text_draw_with_cursor(struct text* t, struct ff_typography typo,
                            Rectangle bounds, struct text_position pos,
-                           bool cursor_moved) {
+                           bool cursor_moved, int focus_flags) {
     assert(pos.row < t->lines.size);
 
     if (cursor_moved)
         text_scroll_with_cursor(t, typo, bounds, pos);
-    else
+    else if ((focus_flags & focus_flag_can_scroll) &&
+             CheckCollisionPointRec(GetMousePosition(), bounds)) {
         text_scroll_with_wheel(t, typo, bounds);
+    }
 
     motion_update(
         &t->scroll_motion,
@@ -618,4 +583,13 @@ void text_draw_with_cursor(struct text* t, struct ff_typography typo,
     ff_get_ortho_projection(projection_params, projection);
     ff_draw(typo.font, t->glyphs.data, t->glyphs.size,
             (float*)projection);
+}
+
+void text_clear_selection(struct text* t) {
+    t->has_selection = false;
+}
+
+void text_clear(struct text* t) {
+    t->buffer.size = 0;
+    text_update_lines(t);
 }

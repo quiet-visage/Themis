@@ -249,8 +249,10 @@ void ff_draw(ff_font_handle_t, struct ff_glyph *glyphs,
              ulong glyphs_count, float *projection);
 struct ff_characteristics ff_get_default_characteristics();
 int ff_get_default_print_flags();
-int ff_utf8_to_utf32(char32_t *dest, const char *src, ulong count);
-int ff_utf32_to_utf8(char *dest, const char32_t *src, ulong count);
+[[nodiscard]] int ff_utf8_to_utf32(char32_t *dest, const char *src,
+                                   ulong count);
+[[nodiscard]] int ff_utf32_to_utf8(char *dest, const char32_t *src,
+                                   ulong count);
 void ff_print_utf8(struct ff_glyphs_vector *vec,
                    struct ff_utf8_str str,
                    struct ff_print_params params, struct ff_position);

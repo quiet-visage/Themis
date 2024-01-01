@@ -1,5 +1,6 @@
 #include "fieldfusion.h"
 
+#include <assert.h>
 #include <math.h>
 #include <sys/types.h>
 #include <uchar.h>
@@ -1505,24 +1506,30 @@ int ff_get_default_print_flags() {
 int ff_utf8_to_utf32(char32_t *dest, const char *src, ulong count) {
     mbstate_t state = {0};
     size_t rc;
+    size_t converted = 0;
     while ((rc = mbrtoc32(dest, src, count, &state))) {
         assert(rc != (size_t)-3 && "no surrogate pairs in UTF-32");
         if (rc == (size_t)-1) return -1;  // invalid input
         if (rc == (size_t)-2) return -1;  // truncated in
         src += rc;
         dest += 1;
+        converted += 1;
     }
+    if (converted != count) return -1;
     return 0;
 }
 
 int ff_utf32_to_utf8(char *dest, const char32_t *src, ulong count) {
     mbstate_t state = {0};
     char *dest_p = dest;
+    size_t converted = 0;
     for (size_t i = 0; i < count; i += 1) {
         size_t rc = c32rtomb(dest_p, src[i], &state);
         if (rc == (size_t)-1) return -1;
         dest_p += rc;
+        converted += 1;
     }
+    if (converted != count) return -1;
     return 0;
 }
 

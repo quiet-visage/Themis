@@ -1,5 +1,6 @@
 #pragma once
 
+#include <focus.h>
 #include <highlighter/highlighter.h>
 #include <motion/motion.h>
 #include <raylib.h>
@@ -85,7 +86,9 @@ void text_scroll_with_cursor(struct text* t,
 void text_scroll_with_wheel(struct text* t, struct ff_typography typo,
                             Rectangle bounds);
 void text_draw(struct text* t, struct ff_typography typo,
-               Rectangle bounds);
+               Rectangle bounds, int focus_flags);
 void text_draw_with_cursor(struct text* t, struct ff_typography typo,
                            Rectangle bounds, struct text_position pos,
-                           bool cursor_moved);
+                           bool cursor_moved, int focus_flags);
+void text_clear_selection(struct text* t);
+void text_clear(struct text* t);
