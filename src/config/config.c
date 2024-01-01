@@ -21,12 +21,12 @@ static const int overlay0 = 0x6c7086ff;
 struct color_scheme g_color_scheme = {
     .bg = 0x1e1e2eff,
     .fg = text,
+    .text_sel_bg = 0x585b70ff, 
     .selected_fg = 0xcba6f7ff,
     .selected_bg = 0x6c7086ff,
     .surface0_bg = 0x313244ff,
     .surface1_bg = 0x45475aff,
     .syntax = {
-
         [token_kind_keyword_t] = mauve,
         [token_kind_function_t] = blue,
         [token_kind_string_t] = green,
@@ -60,3 +60,10 @@ struct color_scheme g_color_scheme = {
 
 struct layout g_layout = {
     .text_spacing = 6.0f, .padding = 8.0f, .gap = 6.0f};
+
+Color hex_to_color(int hex) {
+    return (Color){.r = (hex >> 24) & 0xffl,
+                   .g = (hex >> 16) & 0x00ffl,
+                   .b = (hex >> 8) & 0x0000ffl,
+                   .a = hex & 0x000000ffl};
+}

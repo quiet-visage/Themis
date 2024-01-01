@@ -18,13 +18,6 @@
 #define MENU_MAX_HEIGHT_PERC 0.55f
 #define MENU_EDITOR_OPTIONS_SPACE 6.0f
 
-static Color hex_to_color(int hex) {
-    return (Color){.r = (hex >> 24) & 0xffl,
-                   .g = (hex >> 16) & 0x00ffl,
-                   .b = (hex >> 8) & 0x0000ffl,
-                   .a = hex & 0x000000ffl};
-}
-
 static uint min(uint a, uint b) { return a < b ? a : b; }
 
 static uint edit_distance(const char32_t* s1, size_t len1,
@@ -387,7 +380,7 @@ const char32_t* fuzzy_menu_handle_interactions(
         return NULL;
     }
     if (is_key_sticky(KEY_UP)) fuzzy_menu_sel_prev(fm);
-    if (IsKeyReleased(KEY_ENTER)) {
+    if (IsKeyPressed(KEY_ENTER)) {
         editor_clear(&fm->editor);
         return fm->options[fm->selected].name;
     }

@@ -17,13 +17,6 @@ static size_t char32_str_len(const char32_t* str) {
     return result;
 }
 
-static Color hex_to_color(int hex) {
-    return (Color){.r = (hex >> 24) & 0xffl,
-                   .g = (hex >> 16) & 0x00ffl,
-                   .b = (hex >> 8) & 0x0000ffl,
-                   .a = hex & 0x000000ffl};
-}
-
 static void file_picker_reload_options(struct file_picker* fp) {
     FilePathList files = LoadDirectoryFiles(fp->dir);
     if (files.paths == NULL) return;

@@ -266,21 +266,23 @@ ulong text_get_mouse_hover_col(struct text* t,
     struct line matching_line = t->lines.data[hovering_line];
     ulong matching_line_len = line_length(matching_line);
     if (matching_line_len == 0) return 0;
-    char32_t matching_line_str[matching_line_len];
+
+    char32_t matching_line_str[matching_line_len + 1];
+    matching_line_str[matching_line_len] = 0;
     utf32_substr(matching_line_str,
                  &t->buffer.data[matching_line.start],
                  matching_line_len);
 
     ulong result = 0;
-    float character_x = x_offset;
+    float character_x = 0;
     for (size_t i = 1; i < matching_line_len; i++) {
         struct ff_dimensions measurement = ff_measure(
             typo.font, matching_line_str, i, typo.size, true);
         character_x = measurement.width;
-        if (character_x > mouse.x) break;
+        if (character_x > mouse.x - x_offset) break;
         result = i;
     }
-    if (mouse.x > character_x) result = matching_line_len;
+    if (mouse.x - x_offset > character_x) result = matching_line_len;
 
     return result;
 }
@@ -441,7 +443,8 @@ static void text_draw_single_line_selection(struct text* t,
                                .y = y,
                                .width = width,
                                .height = font_space(typo.size)};
-    DrawRectangleRec(selected_area, GRAY);
+    DrawRectangleRec(selected_area,
+                     hex_to_color(g_color_scheme.text_sel_bg));
 }
 
 static void text_draw_selection(struct text* t,
