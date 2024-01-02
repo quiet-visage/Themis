@@ -267,7 +267,7 @@ void fuzzy_menu_draw_editor(struct fuzzy_menu* fm,
                             .height = dimensions.editor_height};
 
     DrawRectangleRec(editor_bg_rec,
-                     hex_to_color(g_color_scheme.surface0_bg));
+                     GetColor(g_color_scheme.surface0_bg));
 
     BeginScissorMode(editor_rec.x, editor_rec.y, editor_rec.width,
                      editor_rec.height);
@@ -290,7 +290,7 @@ void fuzzy_menu_draw_options(
         .height = dimensions.options_bg_height};
 
     DrawRectangleRec(options_bg_rec,
-                     hex_to_color(g_color_scheme.surface0_bg));
+                     GetColor(g_color_scheme.surface0_bg));
 
     BeginScissorMode(dimensions.bounds_x, options_rec.y,
                      options_rec.width, options_rec.height);
@@ -302,7 +302,7 @@ void fuzzy_menu_draw_options(
                   fm->motion.position[1] - g_layout.gap,
                   options_rec.width + g_layout.padding,
                   typo.size + g_layout.gap * 2,
-                  hex_to_color(g_color_scheme.selected_bg));
+                  GetColor(g_color_scheme.selected_bg));
     EndMode2D();
 
     ff_glyphs_vector_clear(&fm->glyphs);
@@ -339,7 +339,7 @@ void fuzzy_menu_draw_options(
 
             BeginMode2D(cam);
             DrawTexturePro(icon, source, dest, origin, 0,
-                           hex_to_color(g_color_scheme.fg));
+                           GetColor(g_color_scheme.fg));
             EndMode2D();
         }
 

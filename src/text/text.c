@@ -376,7 +376,7 @@ void text_scroll_with_wheel(struct text* t, struct ff_typography typo,
     if (!mouse_within_bounds) return;
     float scrolled = GetMouseWheelMove();
     if (!scrolled) return;
-    t->scroll.vertical += font_space(typo.size) * scrolled;
+    t->scroll.vertical += font_space(typo.size) * scrolled * 4;
     if (t->scroll.vertical < 0) t->scroll.vertical = 0;
     if (t->scroll.vertical >
         font_space(typo.size) * t->lines.size - bounds.height * 0.5f)
@@ -444,7 +444,7 @@ static void text_draw_single_line_selection(struct text* t,
                                .width = width,
                                .height = font_space(typo.size)};
     DrawRectangleRec(selected_area,
-                     hex_to_color(g_color_scheme.text_sel_bg));
+                     GetColor(g_color_scheme.text_sel_bg));
 }
 
 static void text_draw_selection(struct text* t,

@@ -178,7 +178,7 @@ static void file_picker_draw_preview(
         .height = dimensions.file_preview_bg_height};
 
     DrawRectangleRec(file_preview_bg,
-                     hex_to_color(g_color_scheme.surface1_bg));
+                     GetColor(g_color_scheme.surface1_bg));
     if (IsPathFile(selected_file_path)) {
         struct file_preview* preview =
             get_preview(selected_file_path);

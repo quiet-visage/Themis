@@ -19,7 +19,5 @@ struct color_scheme {
     int syntax[token_kind_count_t];
 };
 
-Color hex_to_color(int hex);
-
 extern struct color_scheme g_color_scheme;
 extern struct layout g_layout;
