@@ -1,7 +1,8 @@
 #pragma once
 #include <field_fusion/fieldfusion.h>
 #include <raylib.h>
-#include <text/editor.h>
+
+#include "../editor/editor.h"
 
 struct file_editor {
     const char* file_path;

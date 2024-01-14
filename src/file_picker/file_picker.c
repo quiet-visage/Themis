@@ -1,9 +1,9 @@
-#include <config/config.h>
-#include <file_picker/file_picker.h>
-#include <file_picker/file_preview.h>
+#include "file_picker.h"
+
+#include <field_fusion/fieldfusion.h>
 #include <uchar.h>
 
-#include "field_fusion/fieldfusion.h"
+#include "../config/config.h"
 #include "file_preview.h"
 #include "raylib.h"
 
@@ -122,6 +122,8 @@ struct file_picker_dimensions file_picker_get_dimensions(
     result.file_preview_bounds_width =
         result.file_preview_bg_width - g_layout.padding * 2;
 
+    result.fz_menu_dimensions.editor_width =
+        result.fz_menu_dimensions.bg_width - g_layout.padding * 2;
     result.fz_menu_dimensions.bg_x =
         window_size.x * 0.5f - (result.file_preview_bg_width +
                                 result.fz_menu_dimensions.bg_width) *
@@ -192,17 +194,18 @@ static void file_picker_draw_preview(
         BeginScissorMode(file_preview_bounds.x, file_preview_bounds.y,
                          file_preview_bounds.width,
                          file_preview_bounds.height);
-        text_draw(&preview->text, typo, file_preview_bounds, focus_flags);
+        text_draw(&preview->text, typo, file_preview_bounds,
+                  focus_flags);
         EndScissorMode();
     }
 }
 
 const char* file_picker_perform(struct file_picker* fp,
                                 struct ff_typography typo,
-                               int focus_flags) {
+                                int focus_flags) {
     struct file_picker_dimensions dimensions =
         file_picker_get_dimensions(fp, typo);
-    fuzzy_menu_draw_editor(&fp->menu, typo, focus_flags, 
+    fuzzy_menu_draw_editor(&fp->menu, typo, focus_flags,
                            dimensions.fz_menu_dimensions);
     fuzzy_menu_draw_options(&fp->menu, typo,
                             dimensions.fz_menu_dimensions);
@@ -241,7 +244,7 @@ const char* file_picker_perform(struct file_picker* fp,
             file_picker_reload_options(fp);
 
             return NULL;
-        } 
+        }
         return fp->result;
     }
 

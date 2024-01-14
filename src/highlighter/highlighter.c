@@ -1,10 +1,10 @@
 #include "highlighter.h"
 
 #include <assert.h>
-#include <resources/resources.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "../resources/resources.h"
 #include "serialization_map.h"
 #include "tree_sitter/api.h"
 #include "tree_sitter/parser.h"
@@ -147,8 +147,15 @@ void hlr_highlighter_destroy(struct highlighter *hlr) {
 void hlr_highlighter_update(struct highlighter *hlr,
                             const char *buffer, size_t buffer_size) {
     ts_parser_set_language(g_parser, g_languages[hlr->language]);
-    hlr->tree =
-        ts_parser_parse_string(g_parser, NULL, buffer, buffer_size);
+    if (!hlr->tree) {
+        hlr->tree = ts_parser_parse_string(g_parser, NULL, buffer,
+                                           buffer_size);
+    } else {
+        TSTree *tmp = ts_parser_parse_string(g_parser, NULL, buffer,
+                                             buffer_size);
+        ts_tree_delete(hlr->tree);
+        hlr->tree = tmp;
+    }
 }
 
 void hlr_tokens_update(struct highlighter *hlr, struct tokens *ts) {

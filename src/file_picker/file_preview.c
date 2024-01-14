@@ -1,14 +1,13 @@
 #include "file_preview.h"
 
+#include <field_fusion/fieldfusion.h>
 #include <assert.h>
-#include <file_picker/file_preview.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <uchar.h>
 
-#include "field_fusion/fieldfusion.h"
 #define MAP_SIZE 0x800
 
 struct map_entry {

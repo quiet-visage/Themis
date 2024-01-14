@@ -1,6 +1,7 @@
+#include "resources.h"
+
 #include <assert.h>
 #include <raylib.h>
-#include <resources/resources.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

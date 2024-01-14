@@ -1,5 +1,6 @@
+#include "serialization_map.h"
+
 #include <assert.h>
-#include <highlighter/serialization_map.h>
 #include <stdlib.h>
 #include <string.h>
 

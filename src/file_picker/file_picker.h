@@ -1,5 +1,5 @@
 #pragma once
-#include <menu/fuzzy_menu.h>
+#include "../menu/fuzzy_menu.h"
 
 struct file_picker {
     struct fuzzy_menu menu;

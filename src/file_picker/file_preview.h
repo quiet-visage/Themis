@@ -1,6 +1,6 @@
 #pragma once
 
-#include <text/text.h>
+#include "../text/text.h"
 
 struct file_preview {
     const char* path;

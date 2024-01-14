@@ -1,21 +1,22 @@
 #include "text.h"
 
 #include <assert.h>
-#include <config/config.h>
 #include <field_fusion/fieldfusion.h>
-#include <highlighter/highlighter.h>
-#include <motion/motion.h>
 #include <raylib.h>
 #include <rlgl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <text/cursor.h>
-#include <text/text.h>
-#include <text/unicode_string.h>
 #include <uchar.h>
 
-static float font_space(float font_size) {
+#include "../config/config.h"
+#include "../highlighter/highlighter.h"
+#include "../motion/motion.h"
+#include "cursor.h"
+#include "text.h"
+#include "unicode_string.h"
+
+inline static float font_space(float font_size) {
     return font_size + g_layout.text_spacing;
 }
 ulong line_length(struct line line) { return line.end - line.start; }
@@ -238,9 +239,9 @@ void text_select(struct text* t, struct selection sel) {
     ulong selection_char_count = to - from;
 
     if (selection_char_count > 0)
-        t->has_selection = true;
+        t->text_flags |= text_flag_has_selection;
     else
-        t->has_selection = false;
+        t->text_flags &= ~text_flag_has_selection;
 }
 
 ulong text_get_mouse_hover_line(struct text* t, float font_size,
@@ -300,12 +301,12 @@ void text_handle_mouse(struct text* t, struct ff_typography typo,
             text_get_mouse_hover_line(t, typo.size, mouse, bounds.y);
         t->mouse_press_start_col = text_get_mouse_hover_col(
             t, typo, mouse, bounds.x, t->mouse_press_start_line);
-        t->mouse_was_pressed = true;
+        t->text_flags |= text_flag_mouse_was_pressed;
         return;
     }
 
     bool is_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-    if (is_down && t->mouse_was_pressed) {
+    if (is_down && t->text_flags & text_flag_mouse_was_pressed) {
         ulong end_mouse_press_line =
             text_get_mouse_hover_line(t, typo.size, mouse, bounds.y);
         ulong end_mouse_press_col = text_get_mouse_hover_col(
@@ -319,53 +320,95 @@ void text_handle_mouse(struct text* t, struct ff_typography typo,
     }
 
     bool is_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
-    if (t->mouse_was_pressed && is_released)
-        t->mouse_was_pressed = false;
+    if (t->text_flags & text_flag_mouse_was_pressed && is_released)
+        t->text_flags &= ~text_flag_mouse_was_pressed;
+}
+
+static size_t min(size_t a, size_t b) { return a < b ? a : b; }
+
+static size_t text_visible_lines_cout(size_t size, float height) {
+    size_t acc_size = 0;
+    size_t result = 0;
+    while ((acc_size + size) < height) {
+        acc_size += size;
+        result += 1;
+    }
+    return result;
+}
+
+void text_scroll_with_cursor_vertically(
+    struct text* t, struct ff_typography typo, Rectangle bounds,
+    struct text_position curs_pos) {
+    float glyph_offset = font_space(typo.size);
+    size_t max_scroll_off =
+        text_visible_lines_cout(font_space(typo.size),
+                                bounds.height) *
+        .5f;
+    size_t scroll_off = min(g_scroll_off, max_scroll_off);
+    {  // bottom scroll
+        size_t row = curs_pos.row + scroll_off;
+        float cursor_pixel_position = font_space(typo.size) * row;
+        bool cursor_is_out_of_view =
+            cursor_pixel_position >
+            bounds.height - glyph_offset + t->scroll.vertical;
+        if (cursor_is_out_of_view) {
+            t->scroll.vertical = cursor_pixel_position -
+                                 (bounds.height - glyph_offset);
+        }
+    }
+    {  // top scroll
+        size_t row = curs_pos.row - scroll_off;
+        float cursor_pixel_position =
+            bounds.y + (row < 1 ? g_layout.text_spacing
+                                : font_space(typo.size) * row);
+        float top = bounds.y + t->scroll.vertical;
+        bool cursor_is_out_of_view = cursor_pixel_position < top;
+        if (cursor_is_out_of_view)
+            t->scroll.vertical =
+                bounds.y + font_space(typo.size) * row;
+    }
+}
+
+void text_scroll_with_cursor_horizontally(
+    struct text* t, struct ff_typography typo, Rectangle bounds,
+    struct text_position curs_pos) {
+    struct line line = t->lines.data[curs_pos.row];
+    size_t line_len = line_length(line);
+    {  // right horizontal scroll
+        size_t column = min(curs_pos.column + 5, line_len);
+        char32_t line_str[column + 1];
+        line_str[column] = 0;
+        utf32_substr(line_str, &t->buffer.data[line.start], column);
+        struct ff_dimensions measurement =
+            ff_measure(typo.font, line_str, column, typo.size, true);
+        bool cursor_is_out_of_view =
+            measurement.width > bounds.width + t->scroll.horizontal;
+        if (cursor_is_out_of_view) {
+            t->scroll.horizontal = measurement.width - bounds.width;
+            return;
+        }
+    }
+    {  // left horizontal scroll
+        size_t column = curs_pos.column <= 5 ? curs_pos.column
+                                             : curs_pos.column - 5;
+        char32_t line_str[column + 1];
+        line_str[column] = 0;
+        utf32_substr(line_str, &t->buffer.data[line.start], column);
+        struct ff_dimensions measurement =
+            ff_measure(typo.font, line_str, column, typo.size, true);
+        bool cursor_is_out_of_view =
+            measurement.width < t->scroll.horizontal;
+        if (cursor_is_out_of_view)
+            t->scroll.horizontal = measurement.width;
+    }
 }
 
 void text_scroll_with_cursor(struct text* t,
                              struct ff_typography typo,
                              Rectangle bounds,
                              struct text_position curs_pos) {
-    float glyph_offset = font_space(typo.size);
-    {  // bottom scroll
-        float cursor_pixel_position =
-            font_space(typo.size) * curs_pos.row;
-        bool cursor_is_out_of_view =
-            cursor_pixel_position >
-            bounds.height - glyph_offset + t->scroll.vertical;
-        if (cursor_is_out_of_view)
-            t->scroll.vertical = cursor_pixel_position -
-                                 (bounds.height - glyph_offset);
-    }
-    {  // top scroll
-        float cursor_pixel_position =
-            bounds.y + font_space(typo.size) * curs_pos.row;
-        float top = bounds.y + t->scroll.vertical;
-        bool cursor_is_out_of_view = cursor_pixel_position < top;
-        if (cursor_is_out_of_view)
-            t->scroll.vertical -= top - cursor_pixel_position;
-    }
-
-    struct line line = t->lines.data[curs_pos.row];
-    ulong line_len = line_length(line);
-    char32_t line_str[line_len];
-    memset(line_str, 0, sizeof(char32_t) * line_len);
-    utf32_substr(line_str, &t->buffer.data[line.start], line_len);
-    struct ff_dimensions measurement =
-        ff_measure(typo.font, line_str, line_len, typo.size, true);
-    {  // right horizontal scroll
-        bool cursor_is_out_of_view =
-            measurement.width > bounds.width + t->scroll.horizontal;
-        if (cursor_is_out_of_view)
-            t->scroll.horizontal += font_space(typo.size);
-    }
-    {  // left horizontal scroll
-        bool cursor_is_out_of_view =
-            measurement.width < t->scroll.horizontal;
-        if (cursor_is_out_of_view)
-            t->scroll.horizontal -= font_space(typo.size);
-    }
+    text_scroll_with_cursor_vertically(t, typo, bounds, curs_pos);
+    text_scroll_with_cursor_horizontally(t, typo, bounds, curs_pos);
 }
 
 void text_scroll_with_wheel(struct text* t, struct ff_typography typo,
@@ -376,7 +419,7 @@ void text_scroll_with_wheel(struct text* t, struct ff_typography typo,
     if (!mouse_within_bounds) return;
     float scrolled = GetMouseWheelMove();
     if (!scrolled) return;
-    t->scroll.vertical += font_space(typo.size) * scrolled * 4;
+    t->scroll.vertical += font_space(typo.size) * scrolled * -4;
     if (t->scroll.vertical < 0) t->scroll.vertical = 0;
     if (t->scroll.vertical >
         font_space(typo.size) * t->lines.size - bounds.height * 0.5f)
@@ -405,11 +448,9 @@ static float text_get_cursor_x(struct text* t,
     return result;
 }
 
-static void text_draw_single_line_selection(struct text* t,
-                                            struct ff_typography typo,
-                                            Rectangle bounds,
-                                            ulong row, ulong col,
-                                            ulong length) {
+static void text_draw_single_line_selection(
+    struct text* t, struct ff_typography typo, Rectangle bounds,
+    ulong row, ulong col, ulong length, Color bg_color) {
     if (length == 0) return;
     if (text_is_line_above_view(t, typo, row)) return;
     if (text_is_line_below_view(t, typo, bounds, row)) return;
@@ -443,17 +484,15 @@ static void text_draw_single_line_selection(struct text* t,
                                .y = y,
                                .width = width,
                                .height = font_space(typo.size)};
-    DrawRectangleRec(selected_area,
-                     GetColor(g_color_scheme.text_sel_bg));
+    DrawRectangleRec(selected_area, bg_color);
 }
 
 static void text_draw_selection(struct text* t,
                                 struct ff_typography typo,
-                                Rectangle bounds) {
-    assert(t->has_selection);
-
-    ulong start_line = t->selection.from_line;
-    ulong end_line = t->selection.to_line;
+                                struct selection selection,
+                                Rectangle bounds, Color bg_color) {
+    ulong start_line = selection.from_line;
+    ulong end_line = selection.to_line;
 
     ulong first_visible_line = 0ul;
     while (text_is_line_above_view(t, typo, first_visible_line))
@@ -478,14 +517,14 @@ static void text_draw_selection(struct text* t,
     ulong selected_lines_count = end_line - start_line + 1;
     bool is_single_line = selected_lines_count == 1;
 
-    ulong start_col = t->selection.from_col;
-    ulong end_col = t->selection.to_col;
+    ulong start_col = selection.from_col;
+    ulong end_col = selection.to_col;
 
     if (is_single_line) {
         assert(end_col >= start_col);
-        return text_draw_single_line_selection(t, typo, bounds,
-                                               start_line, start_col,
-                                               end_col - start_col);
+        return text_draw_single_line_selection(
+            t, typo, bounds, start_line, start_col,
+            end_col - start_col, bg_color);
     }
 
     for (size_t i = start_line; i <= end_line; i++) {
@@ -498,98 +537,120 @@ static void text_draw_selection(struct text* t,
         bool is_first = i == start_line;
         if (is_first) {
             text_draw_single_line_selection(
-                t, typo, bounds, i, start_col, line_len - start_col);
+                t, typo, bounds, i, start_col, line_len - start_col,
+                bg_color);
             continue;
         }
 
         bool is_last = i == end_line;
         if (is_last) {
             text_draw_single_line_selection(t, typo, bounds, i, 0,
-                                            end_col);
+                                            end_col, bg_color);
             continue;
         }
 
         text_draw_single_line_selection(t, typo, bounds, i, 0,
-                                        line_len);
+                                        line_len, bg_color);
     }
 }
 
-void text_draw(struct text* t, struct ff_typography typo,
+void text_draw(struct text* this, struct ff_typography typo,
                Rectangle bounds, int focus_flags) {
     if ((focus_flags & focus_flag_can_scroll) &&
         CheckCollisionPointRec(GetMousePosition(), bounds))
-        text_scroll_with_wheel(t, typo, bounds);
+        text_scroll_with_wheel(this, typo, bounds);
 
     motion_update(
-        &t->scroll_motion,
-        (float[2]){t->scroll.horizontal, t->scroll.vertical},
+        &this->scroll_motion,
+        (float[2]){this->scroll.horizontal, this->scroll.vertical},
         GetFrameTime());
 
-    if (t->has_selection) {
-        text_draw_selection(t, typo, bounds);
+    if (this->text_flags & text_flag_has_selection) {
+        text_draw_selection(this, typo, this->selection, bounds,
+                            GetColor(g_color_scheme.text_sel_bg));
         rlDrawRenderBatchActive();
     }
 
-    text_update_glyphs(t, typo, bounds);
+    text_update_glyphs(this, typo, bounds);
     float projection[4][4];
     struct ff_ortho_params projection_params = {
-        .scr_left = 0,
-        .scr_right = GetScreenWidth(),
+        .scr_left = this->scroll_motion.position[0],
+        .scr_right =
+            GetScreenWidth() + this->scroll_motion.position[0],
         .scr_bottom =
-            GetScreenHeight() + t->scroll_motion.position[1],
-        .scr_top = t->scroll_motion.position[1],
+            GetScreenHeight() + this->scroll_motion.position[1],
+        .scr_top = this->scroll_motion.position[1],
         .near = -1.0f,
         .far = 1.0f};
     ff_get_ortho_projection(projection_params, projection);
-    ff_draw(typo.font, t->glyphs.data, t->glyphs.size,
+    ff_draw(typo.font, this->glyphs.data, this->glyphs.size,
             (float*)projection);
 }
 
-void text_draw_with_cursor(struct text* t, struct ff_typography typo,
-                           Rectangle bounds, struct text_position pos,
-                           bool cursor_moved, int focus_flags) {
-    assert(pos.row < t->lines.size);
+static void text_search_highlight_matches(
+    struct text* t, struct text_search_highlight* search_highlights,
+    struct ff_typography typo, Rectangle bounds) {
+    for (size_t i = 0; i < search_highlights->count; i += 1) {
+        text_draw_selection(t, typo, search_highlights->highlights[i],
+                            bounds,
+                            GetColor(g_color_scheme.selected_bg));
+    }
+}
+
+void text_draw_with_cursor(
+    struct text* this, struct ff_typography typo, Rectangle bounds,
+    struct text_position pos, bool cursor_moved, int focus_flags,
+    struct text_search_highlight* search_highlights) {
+    assert(pos.row < this->lines.size);
 
     if (cursor_moved)
-        text_scroll_with_cursor(t, typo, bounds, pos);
+        text_scroll_with_cursor(this, typo, bounds, pos);
     else if ((focus_flags & focus_flag_can_scroll) &&
              CheckCollisionPointRec(GetMousePosition(), bounds)) {
-        text_scroll_with_wheel(t, typo, bounds);
+        text_scroll_with_wheel(this, typo, bounds);
     }
 
     motion_update(
-        &t->scroll_motion,
-        (float[2]){t->scroll.horizontal, t->scroll.vertical},
+        &this->scroll_motion,
+        (float[2]){this->scroll.horizontal, this->scroll.vertical},
         GetFrameTime());
 
-    if (t->has_selection) {
-        text_draw_selection(t, typo, bounds);
+    if (this->text_flags & text_flag_has_selection) {
+        text_draw_selection(this, typo, this->selection, bounds,
+                            GetColor(g_color_scheme.text_sel_bg));
         rlDrawRenderBatchActive();
     }
 
-    text_handle_mouse(t, typo, bounds);
-    float cursor_x = text_get_cursor_x(t, typo, bounds, pos);
-    float cursor_y = pos.row * font_space(typo.size) +
-                     -t->scroll_motion.position[1] + bounds.y;
-    cursor_draw(&t->cursor, cursor_x, cursor_y);
+    if (search_highlights) {
+        text_search_highlight_matches(this, search_highlights, typo,
+                                      bounds);
+    }
 
-    text_update_glyphs(t, typo, bounds);
+    text_handle_mouse(this, typo, bounds);
+    float cursor_x = text_get_cursor_x(this, typo, bounds, pos) -
+                     this->scroll_motion.position[0];
+    float cursor_y = pos.row * font_space(typo.size) +
+                     -this->scroll_motion.position[1] + bounds.y;
+    cursor_draw(&this->cursor, cursor_x, cursor_y);
+
+    text_update_glyphs(this, typo, bounds);
     float projection[4][4];
     struct ff_ortho_params projection_params = {
-        .scr_left = 0,
-        .scr_right = GetScreenWidth(),
+        .scr_left = this->scroll_motion.position[0],
+        .scr_right =
+            GetScreenWidth() + this->scroll_motion.position[0],
         .scr_bottom =
-            GetScreenHeight() + t->scroll_motion.position[1],
-        .scr_top = t->scroll_motion.position[1],
+            GetScreenHeight() + this->scroll_motion.position[1],
+        .scr_top = this->scroll_motion.position[1],
         .near = -1.0f,
         .far = 1.0f};
     ff_get_ortho_projection(projection_params, projection);
-    ff_draw(typo.font, t->glyphs.data, t->glyphs.size,
+    ff_draw(typo.font, this->glyphs.data, this->glyphs.size,
             (float*)projection);
 }
 
 void text_clear_selection(struct text* t) {
-    t->has_selection = false;
+    t->text_flags &= ~text_flag_has_selection;
 }
 
 void text_clear(struct text* t) {

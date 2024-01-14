@@ -1,7 +1,8 @@
 #pragma once
 
-#include <motion/motion.h>
 #include <sys/types.h>
+
+#include "../motion/motion.h"
 
 enum cursor_flags {
     cursor_flag_recently_moved_t = (1 << 0),
@@ -12,12 +13,15 @@ enum cursor_flags {
 
 struct cursor {
     struct motion motion;
+    struct motion smear_motion;
+    float blink_duration_ms;
+    float blink_delay_ms;
     unsigned char max_alpha;
     unsigned char alpha;
-    int flags;
-    double blink_duration_ms;
-    double blink_delay_ms;
+    unsigned char flags;
 };
 
-struct cursor cursor_new();
+void cursor_initialize(void);
+void cursor_terminate(void);
+struct cursor cursor_new(void);
 void cursor_draw(struct cursor* c, float x, float y);

@@ -1,6 +1,13 @@
 RAYLIB_CMAKE_CMD =
 'cmake .. -DCMAKE_BUILD_TYPE="Release" -DOPENGL_VERSION="4.3" -DBUILD_EXAMPLES="OFF" -DCUSTOMIZE_BUILD="ON" -DSUPPORT_FILEFORMAT_SVG="ON"'
 
+function PrebuildCopyShaders() 
+  prebuildcommands {
+    "{RMDIR} " .. _WORKING_DIR .. "/build/shaders",
+    "{COPYDIR} " .. _WORKING_DIR .. "/shaders/ " .. _WORKING_DIR .. "/build/shaders"
+  }
+end
+
 function CheckRaylib()
   if not os.isfile("libs/libraylib.a") then
     os.chdir "external/raylib-5.0"
@@ -26,6 +33,7 @@ function include_raylib()
 end
 
 workspace "themis"
+  usefullpaths "On"
   location "build/"
   language "c++"
   cppdialect "c++17"
@@ -95,7 +103,7 @@ end
 
 project "field_fusion"
   def_cstaticlib()
-  prebuildcommands {"{COPYDIR} " .. _WORKING_DIR .. "/shaders/ " .. _WORKING_DIR .. "/build/shaders"}
+  PrebuildCopyShaders()
   includedirs "external/field_fusion"
   include_freetype()
   files "external/field_fusion/**"
@@ -120,7 +128,6 @@ project "themis"
   cdialect "c11"
   kind "WindowedApp"
   files  "src/**"
-  includedirs "src/"
  
   buildoptions {"-Wall", "-Wextra"}
 

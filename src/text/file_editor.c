@@ -1,15 +1,15 @@
 #include "file_editor.h"
 
 #include <field_fusion/fieldfusion.h>
-#include <highlighter/highlighter.h>
+#include <raylib.h>
 #include <stdio.h>
-#include <text/editor.h>
-#include <text/file_editor.h>
-#include <text/text.h>
-#include <text/unicode_string.h>
-#include "editor.h"
-#include "raylib.h"
-#include <focus.h>
+
+#include "../editor/editor.h"
+#include "../focus.h"
+#include "../highlighter/highlighter.h"
+#include "../text/file_editor.h"
+#include "../text/text.h"
+#include "../text/unicode_string.h"
 
 struct file_editor file_editor_create(void) {
     struct file_editor result = {.file_path = 0,
@@ -28,12 +28,13 @@ void file_editor_open(struct file_editor* fe, const char* file_path) {
 
     const char* file_extension = GetFileExtension(file_path);
     if (file_extension) {
-        enum language file_language = hlr_get_extension_language(file_extension);
-            text_set_syntax_language(&fe->editor.text, file_language);
+        enum language file_language =
+            hlr_get_extension_language(file_extension);
+        text_set_syntax_language(&fe->editor.text, file_language);
     }
 
     text_on_modified(&fe->editor.text);
-    editor_save_undo(&fe->editor);
+    editor_save_history(&fe->editor, &fe->editor.undo_stack);
     fe->editor.cursor.row = 0;
     fe->editor.cursor.column = 0;
 }
@@ -54,9 +55,9 @@ void file_editor_save(struct file_editor* fe) {
 
 void file_editor_draw(struct file_editor* fe,
                       struct ff_typography typo, Rectangle bounds,
-                      int focus_flags){
+                      int focus_flags) {
     if (focus_flags & focus_flag_can_interact) {
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) {
+        if (IsKeyPressed(KEY_F2)) {
             file_editor_save(fe);
         }
     }

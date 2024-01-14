@@ -1,4 +1,4 @@
-#include <config/config.h>
+#include "config.h"
 
 static const int rosewater = 0xf5e0dcff;
 static const int flamingo = 0xf2cdcdff;
@@ -59,3 +59,4 @@ struct color_scheme g_color_scheme = {
 
 struct layout g_layout = {
     .text_spacing = 6.0f, .padding = 8.0f, .gap = 6.0f};
+unsigned char g_scroll_off = 15;

@@ -1,17 +1,17 @@
 #include "fuzzy_menu.h"
 
-#include <config/config.h>
 #include <field_fusion/fieldfusion.h>
 #include <math.h>
-#include <menu/fuzzy_menu.h>
-#include <motion/motion.h>
 #include <raylib.h>
 #include <rlgl.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <text/editor.h>
 #include <uchar.h>
+
+#include "../config/config.h"
+#include "../menu/fuzzy_menu.h"
+#include "../motion/motion.h"
 
 #define MENU_MIN_WIDTH 124.0f
 #define MENU_PADDING 18.0f
@@ -68,19 +68,9 @@ static bool is_key_sticky(int key) {
     return IsKeyPressed(key) || IsKeyPressedRepeat(key);
 }
 
-int compare(const void* element_1, const void* element_2) {
-    struct fuzzy_menu_option* a =
-        (struct fuzzy_menu_option*)element_1;
-    struct fuzzy_menu_option* b =
-        (struct fuzzy_menu_option*)element_2;
-
-    if (a->edit_distance < b->edit_distance) return -1;
-    if (a->edit_distance > b->edit_distance) return 1;
-    return 0;
-}
 
 struct fuzzy_menu fuzzy_menu_create() {
-    struct fuzzy_menu result = {.editor = editor_create(),
+    struct fuzzy_menu result = {.editor = line_editor_create(),
                                 .vertical_scroll = 0,
                                 .glyphs = ff_glyphs_vector_create(),
                                 .previous_buffer_size = 0,
@@ -88,14 +78,13 @@ struct fuzzy_menu fuzzy_menu_create() {
                                 .options = {{0}},
                                 .options_count = 0,
                                 .motion = motion_new()};
-    result.editor.editor_flags |= editor_flag_single_line_mode_t;
     result.motion.f = 1.9f;
     result.motion.z = 0.9f;
     return result;
 }
 
 void fuzzy_menu_destroy(struct fuzzy_menu* fm) {
-    editor_destroy(&fm->editor);
+    line_editor_destroy(&fm->editor);
     ff_glyphs_vector_destroy(&fm->glyphs);
 }
 
@@ -218,6 +207,7 @@ struct fuzzy_menu_dimensions fuzzy_menu_get_dimensions(
         result.bounds_width += 24;  // icon size + spacing
     }
     result.bounds_width = fmaxf(result.bounds_width, MENU_MIN_WIDTH);
+    result.editor_width = result.bounds_width;
 
     result.bg_width = result.bounds_width + g_layout.padding * 2;
     result.bg_x = window_size.x * .5f - result.bounds_width * .5f;
@@ -271,8 +261,8 @@ void fuzzy_menu_draw_editor(struct fuzzy_menu* fm,
 
     BeginScissorMode(editor_rec.x, editor_rec.y, editor_rec.width,
                      editor_rec.height);
-    editor_draw(&fm->editor, typo, editor_rec,
-                focus_flags);  // NOTE: FIX HORZ SCROLL
+    line_editor_draw(&fm->editor, typo, editor_rec,
+                focus_flags);
     EndScissorMode();
 }
 
@@ -365,12 +355,12 @@ void fuzzy_menu_draw_options(
     EndScissorMode();
 }
 
-void fuzzy_menu_sel_next(struct fuzzy_menu *fm) {
-    if (fm->selected < fm->options_count-1) fm->selected +=1;    
+void fuzzy_menu_sel_next(struct fuzzy_menu* fm) {
+    if (fm->selected < fm->options_count - 1) fm->selected += 1;
 }
 
-void fuzzy_menu_sel_prev(struct fuzzy_menu *fm) {
-    if (fm->selected > 0) fm->selected -=1;    
+void fuzzy_menu_sel_prev(struct fuzzy_menu* fm) {
+    if (fm->selected > 0) fm->selected -= 1;
 }
 
 const char32_t* fuzzy_menu_handle_interactions(
@@ -380,8 +370,8 @@ const char32_t* fuzzy_menu_handle_interactions(
         return NULL;
     }
     if (is_key_sticky(KEY_UP)) fuzzy_menu_sel_prev(fm);
-    if (IsKeyPressed(KEY_ENTER)) {
-        editor_clear(&fm->editor);
+    if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_ENTER)) {
+        line_editor_clear(&fm->editor);
         return fm->options[fm->selected].name;
     }
 

@@ -1,6 +1,7 @@
 #pragma once
-#include <highlighter/highlighter.h>
 #include <raylib.h>
+
+#include "../highlighter/highlighter.h"
 
 struct layout {
     float text_spacing;
@@ -21,3 +22,4 @@ struct color_scheme {
 
 extern struct color_scheme g_color_scheme;
 extern struct layout g_layout;
+extern unsigned char g_scroll_off;

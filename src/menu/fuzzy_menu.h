@@ -1,9 +1,10 @@
 #pragma once
 
-#include <resources/resources.h>
-#include <text/editor.h>
-#include <text/unicode_string.h>
 #include <uchar.h>
+
+#include "../editor/line_editor.h"
+#include "../resources/resources.h"
+#include "../text/unicode_string.h"
 
 #define FUZZY_MENU_OPTION_NAME_CAP 256
 #define FUZZY_MENU_OPTIONS_CAP 256
@@ -25,7 +26,7 @@ struct fuzzy_menu_option {
 };
 
 struct fuzzy_menu {
-    struct editor editor;
+    struct line_editor editor;
     float vertical_scroll;
     struct ff_glyphs_vector glyphs;
     size_t previous_buffer_size;
@@ -49,6 +50,7 @@ struct fuzzy_menu_dimensions {
     float options_y;
     float options_bg_y;
 
+    float editor_width;
     float editor_height;
     float editor_bg_height;
 
