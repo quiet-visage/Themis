@@ -84,6 +84,7 @@ void string32_copy(struct string32* s, char32_t* buffer, size_t len) {
 }
 
 void string32_delete(struct string32* s, size_t pos, size_t count) {
+    assert(count < s->size);
     memmove(&s->data[pos], &s->data[pos + count],
             (s->size - pos) * sizeof(char32_t));
     s->size -= count;
