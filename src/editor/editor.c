@@ -2,6 +2,8 @@
 
 #include <uchar.h>
 
+#include "../config/config.h"
+#include "../resources/resources.h"
 #include "../text/text.h"
 #include "history.h"
 #include "raylib.h"
@@ -104,6 +106,7 @@ static size_t text_get_index_line_num(struct editor* this,
 }
 
 static void editor_search_highlights_find(struct editor* this) {
+    if (this->text.buffer.size == 0) return;
     assert(this->search_editor.text.buffer.size > 0);
 
     char32_t* sub_str_ptr = 0;
@@ -440,10 +443,25 @@ static void editor_movement_keybinds(struct editor* this) {
     }
 }
 
+static void editor_delete_rest_of_line(struct editor* this) {
+    editor_save_history(this, &this->undo_stack);
+    if (this->text.text_flags & text_flag_has_selection)
+        return editor_delete_selection(this);
+
+    struct line line = this->text.lines.data[this->cursor.row];
+    size_t start_index = line.start + this->cursor.column;
+    size_t delete_len = line.end - start_index;
+
+    string32_delete(&this->text.buffer, start_index, delete_len);
+    text_on_modified(&this->text);
+}
+
 static void editor_modifier_keybinds(struct editor* this) {
     if (IsKeyDown(KEY_LEFT_CONTROL)) {
         if (is_key_sticky(KEY_H)) return editor_backspace(this);
         if (is_key_sticky(KEY_D)) return editor_delete(this);
+        if (is_key_sticky(KEY_K))
+            return editor_delete_rest_of_line(this);
         if (is_key_sticky(KEY_SLASH)) return editor_undo(this);
         if (IsKeyDown(KEY_LEFT_SHIFT) && is_key_sticky(KEY_U))
             return editor_redo(this);
@@ -553,12 +571,34 @@ static void editor_draw_search_input(struct editor* e,
                                      int focus_flags) {
     assert(e->editor_mode == editor_mode_search_input);
 
-    Rectangle bg = {
-        .x = GetScreenWidth() * 0.5f - EDITOR_SEARCH_BOX_WIDTH * 0.5f,
-        .y = GetScreenHeight() * 0.5f - typo.size * 0.5f,
-        .width = EDITOR_SEARCH_BOX_WIDTH,
-        .height = typo.size};
-    DrawRectangleRec(bg, GRAY);
+    Texture search_icon = get_icon(icon_search_t);
+
+    Rectangle bg;
+    bg.width = bounds.width < EDITOR_SEARCH_BOX_WIDTH
+                   ? bounds.width
+                   : EDITOR_SEARCH_BOX_WIDTH;
+    bg.x = bounds.x + bounds.width * 0.5f - bg.width * 0.5f;
+    bg.y = bounds.height * 0.5f - typo.size * 0.5f;
+    bg.height = typo.size + g_layout.padding * 2;
+
+    DrawRectangleRec(bg, GetColor(g_color_scheme.surface0_bg));
+
+    Rectangle icon_source = {.x = 0,
+                             .y = 0,
+                             .width = search_icon.width,
+                             .height = search_icon.height};
+
+    bg.x += g_layout.padding;
+    bg.y += g_layout.padding;
+    Rectangle icon_dest = {.x = bg.x,
+                           .y = bg.y,
+                           .width = search_icon.width,
+                           .height = search_icon.height};
+    DrawTexturePro(search_icon, icon_source, icon_dest, (Vector2){0},
+                   0, WHITE);
+
+    bg.x += search_icon.width + g_layout.padding;
+    bg.width -= search_icon.width + g_layout.padding * 3;
     line_editor_draw(&e->search_editor, typo, bg, focus_flags);
 };
 

@@ -187,13 +187,14 @@ static void line_editor_insert_char(struct line_editor* this,
 }
 
 static void line_editor_normal_mode(struct line_editor* this) {
+    if (is_key_sticky(KEY_BACKSPACE))
+        return line_editor_backspace(this);
     if (IsKeyDown(KEY_LEFT_CONTROL)) {
         line_editor_movement_keys(this);
 
         if (is_key_sticky(KEY_K))
             return line_editor_delete_rest_of_line(this);
-        if (is_key_sticky(KEY_BACKSPACE))
-            return line_editor_backspace(this);
+
         if (is_key_sticky(KEY_SLASH)) return line_editor_undo(this);
         if (is_key_sticky(KEY_U)) return line_editor_redo(this);
         if (IsKeyPressed(KEY_SPACE))

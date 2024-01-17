@@ -357,15 +357,15 @@ void text_scroll_with_cursor_vertically(
         }
     }
     {  // top scroll
-        size_t row = curs_pos.row - scroll_off;
+        long row = curs_pos.row - scroll_off;
+        row = row > 0 ? row : 0;
         float cursor_pixel_position =
             bounds.y + (row < 1 ? g_layout.text_spacing
                                 : font_space(typo.size) * row);
         float top = bounds.y + t->scroll.vertical;
         bool cursor_is_out_of_view = cursor_pixel_position < top;
         if (cursor_is_out_of_view)
-            t->scroll.vertical =
-                bounds.y + font_space(typo.size) * row;
+            t->scroll.vertical = font_space(typo.size) * row;
     }
 }
 
@@ -565,6 +565,7 @@ void text_draw(struct text* this, struct ff_typography typo,
         (float[2]){this->scroll.horizontal, this->scroll.vertical},
         GetFrameTime());
 
+    BeginScissorMode(bounds.x, bounds.y, bounds.width, bounds.height);
     if (this->text_flags & text_flag_has_selection) {
         text_draw_selection(this, typo, this->selection, bounds,
                             GetColor(g_color_scheme.text_sel_bg));
@@ -585,6 +586,7 @@ void text_draw(struct text* this, struct ff_typography typo,
     ff_get_ortho_projection(projection_params, projection);
     ff_draw(typo.font, this->glyphs.data, this->glyphs.size,
             (float*)projection);
+    EndScissorMode();
 }
 
 static void text_search_highlight_matches(
@@ -615,6 +617,8 @@ void text_draw_with_cursor(
         (float[2]){this->scroll.horizontal, this->scroll.vertical},
         GetFrameTime());
 
+    BeginScissorMode(bounds.x, bounds.y, bounds.width, bounds.height);
+
     if (this->text_flags & text_flag_has_selection) {
         text_draw_selection(this, typo, this->selection, bounds,
                             GetColor(g_color_scheme.text_sel_bg));
@@ -627,6 +631,17 @@ void text_draw_with_cursor(
     }
 
     text_handle_mouse(this, typo, bounds);
+
+    if (focus_flags & focus_flag_can_interact) {
+        this->cursor.flags |= cursor_flag_focused_t;
+    } else {
+        this->cursor.flags &= ~cursor_flag_focused_t;
+    }
+
+    if (cursor_moved) {
+        this->cursor.flags |= cursor_flag_recently_moved_t;       
+    }
+
     float cursor_x = text_get_cursor_x(this, typo, bounds, pos) -
                      this->scroll_motion.position[0];
     float cursor_y = pos.row * font_space(typo.size) +
@@ -647,6 +662,7 @@ void text_draw_with_cursor(
     ff_get_ortho_projection(projection_params, projection);
     ff_draw(typo.font, this->glyphs.data, this->glyphs.size,
             (float*)projection);
+    EndScissorMode();
 }
 
 void text_clear_selection(struct text* t) {

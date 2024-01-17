@@ -6,6 +6,7 @@ enum icon {
     icon_none_t = -1,
     icon_folder_t,
     icon_file_t,
+    icon_search_t,
     icon_count_t
 };
 

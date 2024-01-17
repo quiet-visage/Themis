@@ -7,6 +7,7 @@
 struct file_editor {
     const char* file_path;
     struct editor editor;
+    struct text status_line_text;
 };
 
 struct file_editor file_editor_create(void);
