@@ -1,6 +1,6 @@
 #pragma once
+#include "../dyn_strings/utf32_string.h"
 #include "../highlighter/highlighter.h"
-#include "../text/unicode_string.h"
 
 struct editor_history {
     struct string32 text_buffer;

@@ -21,6 +21,7 @@ static const int overlay0 = 0x6c7086ff;
 struct color_scheme g_color_scheme = {
     .bg = 0x1e1e2eff,
     .fg = text,
+    .text_mute = 0x7f849cff,
     .text_sel_bg = 0x585b70ff,
     .selected_fg = 0xcba6f7ff,
     .selected_bg = 0x6c7086ff,

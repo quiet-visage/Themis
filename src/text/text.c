@@ -14,7 +14,6 @@
 #include "../motion/motion.h"
 #include "cursor.h"
 #include "text.h"
-#include "unicode_string.h"
 
 inline static float font_space(float font_size) {
     return font_size + g_layout.text_spacing;
@@ -155,26 +154,31 @@ static void highlight_glyph_line(struct text* t, size_t* token_index,
     }
 }
 
-void text_update_glyphs(struct text* t, struct ff_typography typo,
+void text_update_glyphs(struct text* this, struct ff_typography typo,
                         Rectangle bounds) {
-    ff_glyphs_vector_clear(&t->glyphs);
+    if (this->buffer.size == 0) {
+        this->glyphs.size = 0;
+        return;
+    }
+    ff_glyphs_vector_clear(&this->glyphs);
     struct ff_position line_position = {.x = bounds.x, .y = bounds.y};
 
     size_t token_index = 0;
-    for (ulong i = 0; i < t->lines.size; i += 1) {
-        if (text_is_line_above_view(t, typo, i)) {
+    for (ulong i = 0; i < this->lines.size; i += 1) {
+        if (text_is_line_above_view(this, typo, i)) {
             line_position.y += font_space(typo.size);
             continue;
         }
-        if (text_is_line_below_view(t, typo, bounds, i)) break;
+        if (text_is_line_below_view(this, typo, bounds, i)) break;
 
-        struct line line = t->lines.data[i];
+        struct line line = this->lines.data[i];
         ulong line_len = line_length(line);
         char32_t line_str[line_len];
         memset(line_str, 0, sizeof(char32_t) * line_len);
-        utf32_substr(line_str, &t->buffer.data[line.start], line_len);
+        utf32_substr(line_str, &this->buffer.data[line.start],
+                     line_len);
         ff_print_utf32(
-            &t->glyphs,
+            &this->glyphs,
             (struct ff_utf32_str){.data = line_str, .size = line_len},
             (struct ff_print_params){
                 .typography = typo,
@@ -183,8 +187,8 @@ void text_update_glyphs(struct text* t, struct ff_typography typo,
                 .draw_spaces = false},
             line_position);
 
-        if (t->highlighter.language != language_none_t)
-            highlight_glyph_line(t, &token_index, line_len, i);
+        if (this->highlighter.language != language_none_t)
+            highlight_glyph_line(this, &token_index, line_len, i);
         line_position.y += font_space(typo.size);
     }
 }
@@ -639,7 +643,7 @@ void text_draw_with_cursor(
     }
 
     if (cursor_moved) {
-        this->cursor.flags |= cursor_flag_recently_moved_t;       
+        this->cursor.flags |= cursor_flag_recently_moved_t;
     }
 
     float cursor_x = text_get_cursor_x(this, typo, bounds, pos) -

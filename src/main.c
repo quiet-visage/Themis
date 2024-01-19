@@ -68,6 +68,9 @@ int main(void) {
         if (focus.picker_flags & focus_flag_can_interact) {
             const char* result = file_picker_perform(&file_picker, typo,
                                 focus.picker_flags);
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                focus_pane_controller(&focus);
+            }
             if (result) {
                 pane_controller_open_in_focused(result);
                 focus_pane_controller(&focus);

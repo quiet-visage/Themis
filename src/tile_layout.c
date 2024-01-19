@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config/config.h"
 #include "raylib.h"
 
 struct layout_action {
@@ -48,12 +49,18 @@ static void tile_perform_internal(struct layout_action* actions,
         assert(action.split_index < *recs_count);
 
         if (action.split_kind == split_horizontal) {
-            recs[action.split_index].width *= 0.5f;
+            recs[action.split_index].width =
+                recs[action.split_index].width * 0.5f -
+                g_layout.padding * .5f;
             recs[(*recs_count)] = recs[action.split_index];
+            recs[(*recs_count)].x += g_layout.padding;
             recs[(*recs_count)++].x += recs[action.split_index].width;
         } else {
-            recs[action.split_index].height *= 0.5f;
+            recs[action.split_index].height =
+                recs[action.split_index].height * 0.5f -
+                g_layout.padding * .5f;
             recs[(*recs_count)] = recs[action.split_index];
+            recs[(*recs_count)].y += g_layout.padding;
             recs[(*recs_count)++].y +=
                 recs[action.split_index].height;
         }
@@ -108,7 +115,8 @@ bool tile_split(enum split_kind split_kind, size_t n) {
     assert(g_layout_actions_count + 1 < MAX_ACTIONS);
 
     Rectangle sim_rec = g_rects[n];
-    if (sim_rec.width < MIN_SIZE || sim_rec.height < MIN_SIZE) return false;
+    if (sim_rec.width < MIN_SIZE || sim_rec.height < MIN_SIZE)
+        return false;
 
     g_layout_actions[g_layout_actions_count++] =
         (struct layout_action){.split_kind = split_kind,

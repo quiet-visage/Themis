@@ -12,6 +12,7 @@ struct layout {
 struct color_scheme {
     int bg;
     int fg;
+    int text_mute;
     int text_sel_bg;
     int selected_fg;
     int selected_bg;

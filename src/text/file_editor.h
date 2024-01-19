@@ -2,10 +2,11 @@
 #include <field_fusion/fieldfusion.h>
 #include <raylib.h>
 
+#include "../dyn_strings/utf8_string.h"
 #include "../editor/editor.h"
 
 struct file_editor {
-    const char* file_path;
+    struct utf8_str file_path;
     struct editor editor;
     struct text status_line_text;
 };

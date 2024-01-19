@@ -758,8 +758,8 @@ struct ht_codepoint_map ht_codepoint_map_create() {
     return hashtable;
 }
 
-void ht_codepoint_map_set(struct ht_codepoint_map *hashtable,
-                          int key, struct ff_map_item value) {
+void ht_codepoint_map_set(struct ht_codepoint_map *hashtable, int key,
+                          struct ff_map_item value) {
     unsigned int slot = ff_ht_int_hash(key) % ht_codepoint_table_size;
 
     struct ht_codepoint_entry *entry = &hashtable->entries[slot];
@@ -1036,7 +1036,7 @@ struct ff_map_item *ff_map_get(struct ff_map *o, char32_t codepoint) {
 }
 
 struct ff_map_item *ff_map_insert(struct ff_map *o,
-                                    const char32_t codepoint) {
+                                  const char32_t codepoint) {
     if (codepoint < 0xff) {
         o->extended_ascii_[codepoint].codepoint = codepoint;
         o->extended_ascii_[codepoint].codepoint_index =
@@ -1440,8 +1440,8 @@ void ff_draw(ff_font_handle_t handle, struct ff_glyph *glyphs,
                           sizeof(struct ff_glyph), strength_offset);
 
     /* Enable gamma correction if user didn't enabled it */
-    bool is_srgb_enabled = glIsEnabled(GL_FRAMEBUFFER_SRGB);
-    bool srgb_enabled_by_fn = !is_srgb_enabled;
+    const bool is_srgb_enabled = glIsEnabled(GL_FRAMEBUFFER_SRGB);
+    const bool srgb_enabled_by_fn = !is_srgb_enabled;
     if (!is_srgb_enabled) glEnable(GL_FRAMEBUFFER_SRGB);
 
     glUseProgram(g_render_shader);
@@ -1535,22 +1535,24 @@ int ff_utf32_to_utf8(char *dest, const char32_t *src, ulong count) {
 
 void ff_print_utf8(struct ff_glyphs_vector *vec,
                    struct ff_utf8_str utf8_string,
-                   struct ff_print_params params, struct ff_position position) {
+                   struct ff_print_params params,
+                   struct ff_position position) {
     char32_t converted_utf32[utf8_string.size];
     ff_utf8_to_utf32(converted_utf32, utf8_string.data,
                      utf8_string.size);
     struct ff_utf32_str utf32_string = {.data = converted_utf32,
-                                   .size = utf8_string.size};
+                                        .size = utf8_string.size};
     ff_print_utf32(vec, utf32_string, params, position);
 }
 
 void ff_print_utf32(struct ff_glyphs_vector *vec,
-                    struct ff_utf32_str str, struct ff_print_params params,
+                    struct ff_utf32_str str,
+                    struct ff_print_params params,
                     struct ff_position position) {
     struct ff_font_texture_pack *fpack =
         ht_fpack_map_get(&g_fonts, params.typography.font);
     struct ff_position pos0 = {position.x,
-                          position.y + params.typography.size};
+                               position.y + params.typography.size};
 
     for (size_t i = 0; i < str.size; i++) {
         // const auto &codepoint = (char32_t)buffer.at(i);
@@ -1601,8 +1603,8 @@ void ff_print_utf32(struct ff_glyphs_vector *vec,
 }
 
 struct ff_dimensions ff_measure(const ff_font_handle_t handle,
-                           char32_t *str, ulong str_count, float size,
-                           bool with_kerning) {
+                                char32_t *str, ulong str_count,
+                                float size, bool with_kerning) {
     struct ff_font_texture_pack *fpack =
         ht_fpack_map_get(&g_fonts, handle);
 

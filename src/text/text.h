@@ -4,12 +4,12 @@
 #include <raylib.h>
 #include <sys/types.h>
 
+#include "../dyn_strings/utf32_string.h"
 #include "../focus.h"
 #include "../highlighter/highlighter.h"
 #include "../motion/motion.h"
 #include "cursor.h"
 #include "raylib.h"
-#include "unicode_string.h"
 
 struct line {
     ulong start;
