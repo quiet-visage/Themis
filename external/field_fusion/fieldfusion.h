@@ -241,30 +241,33 @@ void ff_initialize(const char *version);
 void ff_terminate();
 struct ff_font_config ff_default_font_config(void);
 ff_font_handle_t ff_new_font(const char *path,
-                             struct ff_font_config config);
-void ff_remove_font(ff_font_handle_t handle);
-int ff_gen_glyphs(ff_font_handle_t, char32_t *codepoints,
-                  ulong codepoints_count);
-void ff_draw(ff_font_handle_t, struct ff_glyph *glyphs,
-             ulong glyphs_count, float *projection);
+                             const struct ff_font_config config);
+void ff_remove_font(const ff_font_handle_t handle);
+int ff_gen_glyphs(const ff_font_handle_t, const char32_t *codepoints,
+                  const ulong codepoints_count);
+void ff_draw(const ff_font_handle_t, const struct ff_glyph *glyphs,
+             const ulong glyphs_count, const float *projection);
 struct ff_characteristics ff_get_default_characteristics();
 int ff_get_default_print_flags();
-[[nodiscard]] int ff_utf8_to_utf32(char32_t *dest, const char *src,
-                                   ulong count);
-[[nodiscard]] int ff_utf32_to_utf8(char *dest, const char32_t *src,
-                                   ulong count);
+int ff_utf8_to_utf32(char32_t *dest, const char *src,
+                     const ulong count);
+int ff_utf32_to_utf8(char *dest, const char32_t *src,
+                     const ulong count);
 void ff_print_utf8(struct ff_glyphs_vector *vec,
-                   struct ff_utf8_str str,
-                   struct ff_print_params params, struct ff_position);
+                   const struct ff_utf8_str str,
+                   const struct ff_print_params params,
+                   const struct ff_position);
 void ff_print_utf32(struct ff_glyphs_vector *vec,
-                    struct ff_utf32_str str,
-                    struct ff_print_params params,
-                    struct ff_position);
-struct ff_dimensions ff_measure(const ff_font_handle_t, char32_t *str,
-                                ulong str_count, float size,
-                                bool with_kerning);
+                    const struct ff_utf32_str str,
+                    const struct ff_print_params params,
+                    const struct ff_position);
+struct ff_dimensions ff_measure(const ff_font_handle_t,
+                                const char32_t *str,
+                                const ulong str_count,
+                                const float size,
+                                const bool with_kerning);
 
-void ff_get_ortho_projection(struct ff_ortho_params params,
+void ff_get_ortho_projection(const struct ff_ortho_params params,
                              float dest[][4]);
 struct ff_glyphs_vector ff_glyphs_vector_create();
 void ff_glyphs_vector_destroy(struct ff_glyphs_vector *v);

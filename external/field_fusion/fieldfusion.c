@@ -1,6 +1,5 @@
 #include "fieldfusion.h"
 
-#include <assert.h>
 #include <math.h>
 #include <sys/types.h>
 #include <uchar.h>
@@ -825,7 +824,7 @@ void ht_codepoint_map_free(struct ht_codepoint_map *ht) {
     free(ht->entries);
 }
 
-void ff_get_ortho_projection(struct ff_ortho_params params,
+void ff_get_ortho_projection(const struct ff_ortho_params params,
                              float dest[][4]) {
     GLfloat rl, tb, fn;
 
@@ -968,7 +967,7 @@ struct ff_font_config ff_default_font_config(void) {
 }
 
 ff_font_handle_t ff_new_font(const char *path,
-                             struct ff_font_config config) {
+                             const struct ff_font_config config) {
     ff_font_handle_t handle = g_max_handle;
     ht_fpack_map_set(&g_fonts, handle,
                      (struct ff_font_texture_pack){0});
@@ -1051,8 +1050,9 @@ struct ff_map_item *ff_map_insert(struct ff_map *o,
     return item;
 }
 
-int ff_gen_glyphs(ff_font_handle_t handle, char32_t *codepoints,
-                  ulong codepoints_count) {
+int ff_gen_glyphs(const ff_font_handle_t handle,
+                  const char32_t *codepoints,
+                  const ulong codepoints_count) {
     GLint original_viewport[4];
     glGetIntegerv(GL_VIEWPORT, original_viewport);
 
@@ -1388,8 +1388,9 @@ int ff_gen_glyphs(ff_font_handle_t handle, char32_t *codepoints,
     return retval;
 }
 
-void ff_draw(ff_font_handle_t handle, struct ff_glyph *glyphs,
-             ulong glyphs_count, float *projection) {
+void ff_draw(const ff_font_handle_t handle,
+             const struct ff_glyph *glyphs, const ulong glyphs_count,
+             const float *projection) {
     struct ff_font_texture_pack *fpack =
         ht_fpack_map_get(&g_fonts, handle);
 
@@ -1440,8 +1441,8 @@ void ff_draw(ff_font_handle_t handle, struct ff_glyph *glyphs,
                           sizeof(struct ff_glyph), strength_offset);
 
     /* Enable gamma correction if user didn't enabled it */
-    const bool is_srgb_enabled = glIsEnabled(GL_FRAMEBUFFER_SRGB);
-    const bool srgb_enabled_by_fn = !is_srgb_enabled;
+    bool is_srgb_enabled = glIsEnabled(GL_FRAMEBUFFER_SRGB);
+    bool srgb_enabled_by_fn = !is_srgb_enabled;
     if (!is_srgb_enabled) glEnable(GL_FRAMEBUFFER_SRGB);
 
     glUseProgram(g_render_shader);
@@ -1503,7 +1504,8 @@ int ff_get_default_print_flags() {
     return ff_print_options_enable_kerning;
 }
 
-int ff_utf8_to_utf32(char32_t *dest, const char *src, ulong count) {
+int ff_utf8_to_utf32(char32_t *dest, const char *src,
+                     const ulong count) {
     mbstate_t state = {0};
     size_t rc;
     size_t converted = 0;
@@ -1515,11 +1517,11 @@ int ff_utf8_to_utf32(char32_t *dest, const char *src, ulong count) {
         dest += 1;
         converted += 1;
     }
-    if (converted != count) return -1;
-    return 0;
+    return converted == count ? 0 : -1;
 }
 
-int ff_utf32_to_utf8(char *dest, const char32_t *src, ulong count) {
+int ff_utf32_to_utf8(char *dest, const char32_t *src,
+                     const ulong count) {
     mbstate_t state = {0};
     char *dest_p = dest;
     size_t converted = 0;
@@ -1529,14 +1531,13 @@ int ff_utf32_to_utf8(char *dest, const char32_t *src, ulong count) {
         dest_p += rc;
         converted += 1;
     }
-    if (converted != count) return -1;
-    return 0;
+    return converted == count ? 0 : -1;
 }
 
 void ff_print_utf8(struct ff_glyphs_vector *vec,
-                   struct ff_utf8_str utf8_string,
-                   struct ff_print_params params,
-                   struct ff_position position) {
+                   const struct ff_utf8_str utf8_string,
+                   const struct ff_print_params params,
+                   const struct ff_position position) {
     char32_t converted_utf32[utf8_string.size];
     ff_utf8_to_utf32(converted_utf32, utf8_string.data,
                      utf8_string.size);
@@ -1546,9 +1547,9 @@ void ff_print_utf8(struct ff_glyphs_vector *vec,
 }
 
 void ff_print_utf32(struct ff_glyphs_vector *vec,
-                    struct ff_utf32_str str,
-                    struct ff_print_params params,
-                    struct ff_position position) {
+                    const struct ff_utf32_str str,
+                    const struct ff_print_params params,
+                    const struct ff_position position) {
     struct ff_font_texture_pack *fpack =
         ht_fpack_map_get(&g_fonts, params.typography.font);
     struct ff_position pos0 = {position.x,
@@ -1603,8 +1604,10 @@ void ff_print_utf32(struct ff_glyphs_vector *vec,
 }
 
 struct ff_dimensions ff_measure(const ff_font_handle_t handle,
-                                char32_t *str, ulong str_count,
-                                float size, bool with_kerning) {
+                                const char32_t *str,
+                                const ulong str_count,
+                                const float size,
+                                const bool with_kerning) {
     struct ff_font_texture_pack *fpack =
         ht_fpack_map_get(&g_fonts, handle);
 
