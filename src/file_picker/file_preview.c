@@ -1,7 +1,7 @@
 #include "file_preview.h"
 
-#include <field_fusion/fieldfusion.h>
 #include <assert.h>
+#include <field_fusion/fieldfusion.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,21 +26,22 @@ static struct file_preview file_preview_create(const char* path) {
     struct file_preview result = {0};
     result.path = path;
     result.path_last_modified = GetFileModTime(path);
-    result.text = text_create();
-    string32_copy_file(&result.text.buffer, path);
+    result.text = text_view_create();
+    utf32_str_read_file(&result.text.buffer, path);
 
     const char* file_extension = GetFileExtension(path);
     if (file_extension) {
-        enum language file_language = hlr_get_extension_language(file_extension);
-        text_set_syntax_language(&result.text, file_language);
+        enum language file_language =
+            hlr_get_extension_language(file_extension);
+        text_view_set_syntax_language(&result.text, file_language);
     }
-    
-    text_on_modified(&result.text);
+
+    text_view_on_modified(&result.text);
     return result;
 }
 
 static void file_preview_destroy(struct file_preview* fp) {
-    text_destroy(&fp->text);
+    text_view_destroy(&fp->text);
 }
 
 static size_t path_key_hash(const char* path) {
@@ -48,7 +49,7 @@ static size_t path_key_hash(const char* path) {
     size_t len = path_len > 32 ? path_len : 32;
 
     size_t hash = 0xcbf29ce484222325;
-    for (size_t i = path_len; i > (path_len - (path_len>32 ? 32 : path_len)); i -= 1) {
+    for (size_t i = len; i > (len - (len > 32 ? 32 : len)); i -= 1) {
         hash *= 0x100000001b3;
         hash ^= path[i];
     }

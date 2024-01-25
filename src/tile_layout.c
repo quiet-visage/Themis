@@ -51,16 +51,16 @@ static void tile_perform_internal(struct layout_action* actions,
         if (action.split_kind == split_horizontal) {
             recs[action.split_index].width =
                 recs[action.split_index].width * 0.5f -
-                g_layout.padding * .5f;
+                g_cfg.layout.padding * .5f;
             recs[(*recs_count)] = recs[action.split_index];
-            recs[(*recs_count)].x += g_layout.padding;
+            recs[(*recs_count)].x += g_cfg.layout.padding;
             recs[(*recs_count)++].x += recs[action.split_index].width;
         } else {
             recs[action.split_index].height =
                 recs[action.split_index].height * 0.5f -
-                g_layout.padding * .5f;
+                g_cfg.layout.padding * .5f;
             recs[(*recs_count)] = recs[action.split_index];
-            recs[(*recs_count)].y += g_layout.padding;
+            recs[(*recs_count)].y += g_cfg.layout.padding;
             recs[(*recs_count)++].y +=
                 recs[action.split_index].height;
         }

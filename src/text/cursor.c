@@ -20,7 +20,7 @@ void cursor_terminate(void) { UnloadShader(g_cursor_shader); }
 
 struct cursor cursor_new() {
     struct cursor result = {0};
-    result.motion.f = 2.5f;
+    result.motion.f = 4.5f;
     result.motion.z = 1.0f;
     result.motion.r = -1.0f;
     result.smear_motion = result.motion;

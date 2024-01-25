@@ -3,13 +3,13 @@
 #define STACK_PREALLOC_LENGTH 4
 
 struct editor_history editor_history_create(
-    struct string32* buffer, struct text_position cursor) {
+    struct utf32_str* buffer, struct text_position cursor) {
     return (struct editor_history){
-        .text_buffer = string32_clone(buffer), .cursor = cursor};
+        .text_buffer = utf32_str_clone(buffer), .cursor = cursor};
 }
 
 void editor_history_destroy(struct editor_history* this) {
-    string32_destroy(&this->text_buffer);
+    utf32_str_destroy(&this->text_buffer);
 }
 
 struct editor_history_stack editor_history_stack_create(void) {

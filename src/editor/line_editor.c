@@ -4,7 +4,6 @@
 #include <raylib.h>
 #include <uchar.h>
 
-#include "../text/text.h"
 #include "history.h"
 
 static bool is_key_sticky(int key) {
@@ -16,13 +15,13 @@ struct line_editor line_editor_create(void) {
         .undo_stack = editor_history_stack_create(),
         .redo_stack = editor_history_stack_create(),
         .cursor = {0},
-        .text = text_create()};
+        .text = text_view_create()};
 }
 
 void line_editor_destroy(struct line_editor* this) {
     editor_history_stack_destroy(&this->undo_stack);
     editor_history_stack_destroy(&this->redo_stack);
-    text_destroy(&this->text);
+    text_view_destroy(&this->text);
 }
 
 static void line_editor_mov_right(struct line_editor* this) {
@@ -54,7 +53,7 @@ static void line_editor_begin_selection_mode(
 
 static void line_editor_end_selection_mode(struct line_editor* this) {
     this->line_editor_mode = line_editor_mode_normal;
-    text_clear_selection(&this->text);
+    text_view_clear_selection(&this->text);
 }
 
 static void line_editor_delete_selection(struct line_editor* this) {
@@ -72,16 +71,16 @@ static void line_editor_delete_selection(struct line_editor* this) {
     size_t end_index = line_end.start + this->text.selection.to_col;
     size_t count = end_index - beg_index;
 
-    string32_delete(&this->text.buffer, beg_index, count);
+    utf32_str_delete(&this->text.buffer, beg_index, count);
     line_editor_end_selection_mode(this);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 }
 
 static void line_editor_delete_char_at(struct line_editor* this,
                                        size_t index) {
     assert(index <= this->text.buffer.size);
-    string32_delete(&this->text.buffer, index, 1);
-    text_on_modified(&this->text);
+    utf32_str_delete(&this->text.buffer, index, 1);
+    text_view_on_modified(&this->text);
 }
 
 static void line_editor_backspace(struct line_editor* this) {
@@ -100,7 +99,7 @@ static void line_editor_backspace(struct line_editor* this) {
         this->cursor.column;
     if (!cursor_position) return;
 
-    line_editor_delete_char_at(this, cursor_position);
+    line_editor_delete_char_at(this, cursor_position - 1);
     line_editor_mov_left(this);
 }
 
@@ -117,11 +116,11 @@ static void line_editor_delete_rest_of_line(
                         this->cursor.column;
 
     line_editor_save_history(this, &this->undo_stack);
-    string32_delete(&this->text.buffer,
+    utf32_str_delete(&this->text.buffer,
                     this->text.lines.data[this->cursor.row].start +
                         this->cursor.column,
                     delete_len);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 }
 
 static void line_editor_delete(struct line_editor* this) {
@@ -154,12 +153,12 @@ static void line_editor_undo(struct line_editor* this) {
 
     struct editor_history* top =
         editor_history_stack_top(&this->undo_stack);
-    string32_copy(&this->text.buffer, top->text_buffer.data,
+    utf32_str_copy(&this->text.buffer, top->text_buffer.data,
                   top->text_buffer.size);
     this->cursor = top->cursor;
 
     editor_history_stack_pop(&this->undo_stack);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 }
 
 static void line_editor_redo(struct line_editor* this) {
@@ -168,21 +167,21 @@ static void line_editor_redo(struct line_editor* this) {
 
     struct editor_history* top =
         editor_history_stack_top(&this->redo_stack);
-    string32_copy(&this->text.buffer, top->text_buffer.data,
+    utf32_str_copy(&this->text.buffer, top->text_buffer.data,
                   top->text_buffer.size);
     this->cursor = top->cursor;
 
     editor_history_stack_pop(&this->redo_stack);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 }
 
 static void line_editor_insert_char(struct line_editor* this,
                                     char32_t char_) {
     line_editor_save_history(this, &this->undo_stack);
 
-    string32_insert_char(&this->text.buffer, this->cursor.column,
+    utf32_str_insert_char(&this->text.buffer, this->cursor.column,
                          char_);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
     line_editor_mov_right(this);
 }
 
@@ -216,7 +215,7 @@ static void line_editor_selection_mode(struct line_editor* this) {
     }
 
     if (this->line_editor_flags & line_editor_flag_cursor_moved) {
-        text_select(&this->text,
+        text_view_select(&this->text,
                     (struct selection){
                         .from_line = this->selection_begin.row,
                         .from_col = this->selection_begin.column,
@@ -245,7 +244,7 @@ void line_editor_draw(struct line_editor* this,
         line_editor_handle_interaction(this);
     }
     focus_flags &= ~focus_flag_can_scroll;
-    text_draw_with_cursor(
+    text_view_draw_with_cursor(
         &this->text, typo, bounds, this->cursor,
         this->line_editor_flags & line_editor_flag_cursor_moved,
         focus_flags, 0);
@@ -254,7 +253,7 @@ void line_editor_draw(struct line_editor* this,
 }
 
 void line_editor_clear(struct line_editor* e) {
-    text_clear(&e->text);
+    text_view_clear(&e->text);
     e->cursor.row = 0;
     e->cursor.column = 0;
 }

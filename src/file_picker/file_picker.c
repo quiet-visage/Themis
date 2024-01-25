@@ -101,12 +101,12 @@ struct file_picker_dimensions file_picker_get_dimensions(
     result.file_preview_bg_height =
         window_size.y * FILE_PICKER_FILE_PREVIEW_HEIGHT_PERC;
     result.file_preview_bounds_height =
-        result.file_preview_bg_height - g_layout.padding * 2;
+        result.file_preview_bg_height - g_cfg.layout.padding * 2;
 
     result.file_preview_bg_y =
         window_size.y * 0.5f - result.file_preview_bg_height * 0.5f;
     result.file_preview_bounds_y =
-        result.file_preview_bg_y + g_layout.padding;
+        result.file_preview_bg_y + g_cfg.layout.padding;
     result.fz_menu_dimensions.editor_bg_y = result.file_preview_bg_y;
     result.fz_menu_dimensions.editor_y = result.file_preview_bounds_y;
     result.fz_menu_dimensions.editor_y = result.file_preview_bounds_y;
@@ -114,16 +114,16 @@ struct file_picker_dimensions file_picker_get_dimensions(
         result.fz_menu_dimensions.editor_bg_y +
         result.fz_menu_dimensions.editor_bg_height;
     result.fz_menu_dimensions.options_y =
-        result.fz_menu_dimensions.options_bg_y + g_layout.padding;
+        result.fz_menu_dimensions.options_bg_y + g_cfg.layout.padding;
 
     result.file_preview_bg_width =
         (window_size.x - result.fz_menu_dimensions.bg_width) *
         FILE_PICKER_FILE_PREVIEW_WIDTH_PERC;
     result.file_preview_bounds_width =
-        result.file_preview_bg_width - g_layout.padding * 2;
+        result.file_preview_bg_width - g_cfg.layout.padding * 2;
 
     result.fz_menu_dimensions.editor_width =
-        result.fz_menu_dimensions.bg_width - g_layout.padding * 2;
+        result.fz_menu_dimensions.bg_width - g_cfg.layout.padding * 2;
     result.fz_menu_dimensions.bg_x =
         window_size.x * 0.5f - (result.file_preview_bg_width +
                                 result.fz_menu_dimensions.bg_width) *
@@ -131,21 +131,21 @@ struct file_picker_dimensions file_picker_get_dimensions(
     result.file_preview_bg_x = result.fz_menu_dimensions.bg_x +
                                result.fz_menu_dimensions.bg_width;
     result.file_preview_bounds_x =
-        result.file_preview_bg_x + g_layout.padding;
+        result.file_preview_bg_x + g_cfg.layout.padding;
 
     result.fz_menu_dimensions.options_bg_height =
         result.file_preview_bg_height -
         result.fz_menu_dimensions.editor_bg_height;
 
     result.fz_menu_dimensions.options_y =
-        result.fz_menu_dimensions.options_bg_y + g_layout.padding;
+        result.fz_menu_dimensions.options_bg_y + g_cfg.layout.padding;
     result.fz_menu_dimensions.bounds_x =
-        result.fz_menu_dimensions.bg_x + g_layout.padding;
+        result.fz_menu_dimensions.bg_x + g_cfg.layout.padding;
     result.fz_menu_dimensions.options_x =
         result.fz_menu_dimensions.bounds_x + 24;  // NOTE
     result.fz_menu_dimensions.options_height =
         result.fz_menu_dimensions.options_bg_height -
-        g_layout.padding * 2;
+        g_cfg.layout.padding * 2;
 
     return result;
 }
@@ -180,7 +180,7 @@ static void file_picker_draw_preview(
         .height = dimensions.file_preview_bg_height};
 
     DrawRectangleRec(file_preview_bg,
-                     GetColor(g_color_scheme.surface1_bg));
+                     GetColor(g_cfg.color_scheme.surface1_bg));
     if (IsPathFile(selected_file_path)) {
         struct file_preview* preview =
             get_preview(selected_file_path);
@@ -194,7 +194,7 @@ static void file_picker_draw_preview(
         BeginScissorMode(file_preview_bounds.x, file_preview_bounds.y,
                          file_preview_bounds.width,
                          file_preview_bounds.height);
-        text_draw(&preview->text, typo, file_preview_bounds,
+        text_view_draw(&preview->text, typo, file_preview_bounds,
                   focus_flags);
         EndScissorMode();
     }

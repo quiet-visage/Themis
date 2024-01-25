@@ -4,7 +4,6 @@
 
 #include "../config/config.h"
 #include "../resources/resources.h"
-#include "../text/text.h"
 #include "history.h"
 #include "raylib.h"
 
@@ -142,7 +141,7 @@ struct editor editor_create(void) {
     struct editor result = {0};
     result.redo_stack = editor_history_stack_create();
     result.undo_stack = editor_history_stack_create();
-    result.text = text_create();
+    result.text = text_view_create();
     result.search_editor = line_editor_create();
     result.search_highlights = editor_search_highlights_create();
     return result;
@@ -184,9 +183,9 @@ static void editor_paste_from_clipboard(struct editor* this) {
     size_t cursor_index =
         this->text.lines.data[this->cursor.row].start +
         this->cursor.column;
-    string32_insert_buf(&this->text.buffer, cursor_index,
+    utf32_str_insert_buf(&this->text.buffer, cursor_index,
                         clipboard_utf32, clipboard_utf8_len);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 
     for (size_t i = 0; i < clipboard_utf8_len; i += 1) {
         editor_mov_char_right(this);
@@ -210,9 +209,9 @@ static void editor_delete_selection(struct editor* e) {
     size_t end_index = line_end.start + e->text.selection.to_col;
     size_t count = end_index - beg_index;
 
-    string32_delete(&e->text.buffer, beg_index, count);
+    utf32_str_delete(&e->text.buffer, beg_index, count);
     editor_end_selection_mode(e);
-    text_on_modified(&e->text);
+    text_view_on_modified(&e->text);
 }
 
 static void editor_cut_selection(struct editor* this) {
@@ -235,11 +234,11 @@ static void editor_undo(struct editor* this) {
 
     struct editor_history* top =
         editor_history_stack_top(&this->undo_stack);
-    string32_copy(&this->text.buffer, top->text_buffer.data,
+    utf32_str_copy(&this->text.buffer, top->text_buffer.data,
                   top->text_buffer.size);
     this->cursor = top->cursor;
     editor_history_stack_pop(&this->undo_stack);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 }
 
 static void editor_redo(struct editor* this) {
@@ -248,18 +247,18 @@ static void editor_redo(struct editor* this) {
 
     struct editor_history* top =
         editor_history_stack_top(&this->redo_stack);
-    string32_copy(&this->text.buffer, top->text_buffer.data,
+    utf32_str_copy(&this->text.buffer, top->text_buffer.data,
                   top->text_buffer.size);
     this->cursor = top->cursor;
     editor_history_stack_pop(&this->redo_stack);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 }
 
 void editor_destroy(struct editor* this) {
     editor_history_stack_destroy(&this->redo_stack);
     editor_history_stack_destroy(&this->undo_stack);
     line_editor_destroy(&this->search_editor);
-    text_destroy(&this->text);
+    text_view_destroy(&this->text);
     editor_search_highlights_destroy(&this->search_highlights);
 }
 
@@ -276,9 +275,9 @@ static void editor_backspace(struct editor* this) {
         this->cursor.column;
     if (cursor_position == 0) return;
 
-    string32_delete(&this->text.buffer, cursor_position - 1, 1);
+    utf32_str_delete(&this->text.buffer, cursor_position - 1, 1);
     editor_mov_char_left(this);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
 }
 
 static void editor_delete(struct editor* this) {
@@ -290,19 +289,19 @@ static void editor_delete(struct editor* this) {
         this->text.lines.data[this->cursor.row].start +
         this->cursor.column;
     if (cursor_position >= this->text.buffer.size) return;
-    string32_delete(&this->text.buffer, cursor_position, 1);
-    text_on_modified(&this->text);
+    utf32_str_delete(&this->text.buffer, cursor_position, 1);
+    text_view_on_modified(&this->text);
 }
 
 static void editor_insert_char(struct editor* this, char32_t chr) {
     editor_save_history(this, &this->undo_stack);
 
-    string32_insert_char(
+    utf32_str_insert_char(
         &this->text.buffer,
         this->text.lines.data[this->cursor.row].start +
             this->cursor.column,
         chr);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
     editor_mov_char_right(this);
 }
 
@@ -311,12 +310,12 @@ static void editor_insert_tab(struct editor* this, uint8_t tab_size) {
 
     char32_t tab[tab_size];
     for (size_t i = 0; i < tab_size; i += 1) tab[i] = U' ';
-    string32_insert_buf(
+    utf32_str_insert_buf(
         &this->text.buffer,
         this->text.lines.data[this->cursor.row].start +
             this->cursor.column,
         tab, tab_size);
-    text_on_modified(&this->text);
+    text_view_on_modified(&this->text);
     for (size_t i = 0; i < tab_size; i += 1)
         editor_mov_char_right(this);
 }
@@ -371,7 +370,7 @@ static void editor_begin_selection_mode(struct editor* this) {
 
 static void editor_end_selection_mode(struct editor* this) {
     this->editor_mode = editor_mode_normal;
-    text_clear_selection(&this->text);
+    text_view_clear_selection(&this->text);
 }
 
 static void editor_begin_search_input_mode(struct editor* this) {
@@ -452,8 +451,8 @@ static void editor_delete_rest_of_line(struct editor* this) {
     size_t start_index = line.start + this->cursor.column;
     size_t delete_len = line.end - start_index;
 
-    string32_delete(&this->text.buffer, start_index, delete_len);
-    text_on_modified(&this->text);
+    utf32_str_delete(&this->text.buffer, start_index, delete_len);
+    text_view_on_modified(&this->text);
 }
 
 static void editor_modifier_keybinds(struct editor* this) {
@@ -496,9 +495,9 @@ static void editor_move_cursor_on_click(struct editor* e,
     Vector2 mouse = GetMousePosition();
     if (!CheckCollisionPointRec(mouse, bounds)) return;
 
-    ulong hover_line = text_get_mouse_hover_line(&e->text, typo.size,
+    ulong hover_line = text_view_get_mouse_hover_line(&e->text, typo.size,
                                                  mouse, bounds.y);
-    ulong hover_col = text_get_mouse_hover_col(&e->text, typo, mouse,
+    ulong hover_col = text_view_get_mouse_hover_col(&e->text, typo, mouse,
                                                bounds.x, hover_line);
 
     e->cursor.row = hover_line;
@@ -523,7 +522,7 @@ static void editor_handle_selection_mode_interactions(
         editor_end_selection_mode(this);
     }
     if (this->editor_flags & editor_flag_cursor_moved) {
-        text_select(&this->text,
+        text_view_select(&this->text,
                     (struct selection){
                         .from_line = this->selection_begin.row,
                         .from_col = this->selection_begin.column,
@@ -579,17 +578,17 @@ static void editor_draw_search_input(struct editor* e,
                    : EDITOR_SEARCH_BOX_WIDTH;
     bg.x = bounds.x + bounds.width * 0.5f - bg.width * 0.5f;
     bg.y = bounds.height * 0.5f - typo.size * 0.5f;
-    bg.height = typo.size + g_layout.padding * 2;
+    bg.height = typo.size + g_cfg.layout.padding * 2;
 
-    DrawRectangleRec(bg, GetColor(g_color_scheme.surface0_bg));
+    DrawRectangleRec(bg, GetColor(g_cfg.color_scheme.surface0_bg));
 
     Rectangle icon_source = {.x = 0,
                              .y = 0,
                              .width = search_icon.width,
                              .height = search_icon.height};
 
-    bg.x += g_layout.padding;
-    bg.y += g_layout.padding;
+    bg.x += g_cfg.layout.padding;
+    bg.y += g_cfg.layout.padding;
     Rectangle icon_dest = {.x = bg.x,
                            .y = bg.y,
                            .width = search_icon.width,
@@ -597,8 +596,8 @@ static void editor_draw_search_input(struct editor* e,
     DrawTexturePro(search_icon, icon_source, icon_dest, (Vector2){0},
                    0, WHITE);
 
-    bg.x += search_icon.width + g_layout.padding;
-    bg.width -= search_icon.width + g_layout.padding * 3;
+    bg.x += search_icon.width + g_cfg.layout.padding;
+    bg.width -= search_icon.width + g_cfg.layout.padding * 3;
     line_editor_draw(&e->search_editor, typo, bg, focus_flags);
 };
 
@@ -612,12 +611,12 @@ void editor_draw(struct editor* this, struct ff_typography typo,
         struct text_search_highlight search_highlights = {
             .highlights = this->search_highlights.highlights,
             .count = this->search_highlights.length};
-        text_draw_with_cursor(
+        text_view_draw_with_cursor(
             &this->text, typo, bounds, this->cursor,
             this->editor_flags & editor_flag_cursor_moved,
             focus_flags, &search_highlights);
     } else {
-        text_draw_with_cursor(
+        text_view_draw_with_cursor(
             &this->text, typo, bounds, this->cursor,
             this->editor_flags & editor_flag_cursor_moved,
             focus_flags, 0);
@@ -631,7 +630,7 @@ void editor_draw(struct editor* this, struct ff_typography typo,
 }
 
 void editor_clear(struct editor* e) {
-    text_clear(&e->text);
+    text_view_clear(&e->text);
     e->cursor.row = 0;
     e->cursor.column = 0;
 }

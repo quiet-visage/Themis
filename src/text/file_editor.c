@@ -12,22 +12,21 @@
 #include "../focus.h"
 #include "../highlighter/highlighter.h"
 #include "../text/file_editor.h"
-#include "../text/text.h"
 
 struct file_editor file_editor_create(void) {
     struct file_editor result = {.file_path = utf8_str_create(),
                                  .editor = editor_create(),
-                                 .status_line_text = text_create()};
+                                 .status_line_text = text_view_create()};
     static const char* placeholder = "<unnamed>";
-    string32_copy_utf8(&result.status_line_text.buffer, placeholder,
-                       strlen(placeholder));
-    text_on_modified(&result.status_line_text);
+    utf32_str_copy_utf8(&result.status_line_text.buffer, placeholder,
+                        strlen(placeholder));
+    text_view_on_modified(&result.status_line_text);
     return result;
 }
 
 void file_editor_destroy(struct file_editor* this) {
     editor_destroy(&this->editor);
-    text_destroy(&this->status_line_text);
+    text_view_destroy(&this->status_line_text);
     utf8_str_destroy(&this->file_path);
 }
 
@@ -43,44 +42,45 @@ static void file_editor_update_status_line_text(
         if (slash_counter == 2) break;
     }
 
+    if (!second_to_last_slash_index) {
+        utf32_str_copy_utf8(&this->status_line_text.buffer,
+                            this->file_path.data,
+                            this->file_path.length);
+    }
+
     char* short_str_ptr =
         &this->file_path.data[second_to_last_slash_index];
     size_t short_str_len = strlen(short_str_ptr);
 
-    const static char* ellipsis = "[..]";
+    static const char* ellipsis = "[..]";
     size_t ellipsis_len = strlen(ellipsis);
 
-    if (second_to_last_slash_index != 0) {
-        string32_copy_utf8(&this->status_line_text.buffer, ellipsis,
-                           ellipsis_len);
-        string32_insert_buf_utf8(&this->status_line_text.buffer,
-                                 ellipsis_len, short_str_ptr,
-                                 short_str_len);
-    } else {
-        string32_copy_utf8(&this->status_line_text.buffer, ellipsis,
-                           ellipsis_len);
-        string32_insert_buf_utf8(&this->status_line_text.buffer,
-                                 ellipsis_len, short_str_ptr,
-                                 short_str_len);
-    }
+    size_t final_name_len = ellipsis_len + short_str_len;
+    char final_name[final_name_len + 1];
+    final_name[final_name_len] = 0;
+    memcpy(final_name, ellipsis, ellipsis_len);
+    memcpy(&final_name[ellipsis_len], short_str_ptr, short_str_len);
 
-    text_on_modified(&this->status_line_text);
+    utf32_str_copy_utf8(&this->status_line_text.buffer, final_name,
+                        final_name_len);
+
+    text_view_on_modified(&this->status_line_text);
 }
 
 void file_editor_open(struct file_editor* this,
                       const char* file_path) {
     assert(IsPathFile(file_path));
     utf8_str_copy(&this->file_path, file_path, strlen(file_path));
-    string32_copy_file(&this->editor.text.buffer, file_path);
+    utf32_str_read_file(&this->editor.text.buffer, file_path);
 
     const char* file_extension = GetFileExtension(file_path);
     if (file_extension) {
         enum language file_language =
             hlr_get_extension_language(file_extension);
-        text_set_syntax_language(&this->editor.text, file_language);
+        text_view_set_syntax_language(&this->editor.text, file_language);
     }
 
-    text_on_modified(&this->editor.text);
+    text_view_on_modified(&this->editor.text);
     editor_save_history(&this->editor, &this->editor.undo_stack);
 
     this->editor.cursor.row = 0;
@@ -91,8 +91,6 @@ void file_editor_open(struct file_editor* this,
 
 void file_editor_save(struct file_editor* this) {
     if (!this->file_path.length) return;
-    printf("Fake saving to file %s\n", this->file_path.data);
-    return;
     FILE* file = fopen(this->file_path.data, "w");
     assert(file != NULL);
 
@@ -117,9 +115,10 @@ void file_editor_draw(struct file_editor* this,
     Rectangle editor_bounds = bounds;
     if (this->status_line_text.buffer.size) {
         Rectangle status_line_bounds = bounds;
-        status_line_bounds.height = typo.size + g_layout.padding * 2;
+        status_line_bounds.height =
+            typo.size + g_cfg.layout.padding * 2;
         DrawRectangleRec(status_line_bounds,
-                         GetColor(g_color_scheme.surface0_bg));
+                         GetColor(g_cfg.color_scheme.surface0_bg));
 
         status_line_bounds.y = status_line_bounds.y +
                                status_line_bounds.height * .5f -
@@ -139,14 +138,28 @@ void file_editor_draw(struct file_editor* this,
 
         struct ff_typography status_line_typo = typo;
         status_line_typo.color = focus_flags & focus_flag_can_interact
-                                     ? g_color_scheme.fg
-                                     : g_color_scheme.text_mute;
-        text_draw(&this->status_line_text, status_line_typo,
+                                     ? g_cfg.color_scheme.highlight_fg
+                                     : g_cfg.color_scheme.fg;
+        text_view_draw(&this->status_line_text, status_line_typo,
                   status_line_bounds, 0);
         editor_bounds.height -= status_line_bounds.height;
         editor_bounds.y +=
-            status_line_bounds.height + g_layout.padding;
+            status_line_bounds.height + g_cfg.layout.padding;
     }
 
     editor_draw(&this->editor, typo, editor_bounds, focus_flags);
+
+    float fade_out_height = 32;
+    Rectangle fade_out_bounds = {
+        .x = editor_bounds.x,
+        .y = editor_bounds.y + editor_bounds.height - fade_out_height,
+        .width = editor_bounds.width,
+        .height = fade_out_height};
+
+    Color bg = GetColor(g_cfg.color_scheme.bg);
+    Color transparent_bg = bg;
+    transparent_bg.a = 0;
+    DrawRectangleGradientV(
+        fade_out_bounds.x, fade_out_bounds.y, fade_out_bounds.width,
+        fade_out_bounds.height, transparent_bg, bg);
 }

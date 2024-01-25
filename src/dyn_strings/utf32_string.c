@@ -6,22 +6,22 @@
 #include <string.h>
 #include <uchar.h>
 
-struct string32 string32_create(void) {
-    struct string32 result = {.data = calloc(sizeof(char32_t), 2),
+struct utf32_str utf32_str_create(void) {
+    struct utf32_str result = {.data = calloc(sizeof(char32_t), 2),
                               .size = 0,
                               .capacity = sizeof(char32_t) * 2};
     return result;
 }
 
-struct string32 string32_clone(struct string32* str32) {
-    struct string32 result = {.data = malloc(str32->capacity),
+struct utf32_str utf32_str_clone(struct utf32_str* str32) {
+    struct utf32_str result = {.data = malloc(str32->capacity),
                               .capacity = str32->capacity,
                               .size = str32->size};
     memcpy(result.data, str32->data, str32->capacity);
     return result;
 }
 
-void string32_copy_utf8(struct string32* s, const char* buffer,
+void utf32_str_copy_utf8(struct utf32_str* s, const char* buffer,
                         size_t len) {
     size_t required_capacity = sizeof(char32_t) * len;
     size_t previous_capacity = s->capacity;
@@ -45,7 +45,7 @@ void string32_copy_utf8(struct string32* s, const char* buffer,
     }
 }
 
-void string32_copy_file(struct string32* s, const char* path) {
+void utf32_str_read_file(struct utf32_str* s, const char* path) {
     FILE* file = fopen(path, "r");
     assert(file);
 
@@ -58,17 +58,17 @@ void string32_copy_file(struct string32* s, const char* path) {
     fread(file_contents, 1, file_size, file);
     fclose(file);
 
-    string32_copy_utf8(s, file_contents, file_size);
+    utf32_str_copy_utf8(s, file_contents, file_size);
 }
 
-void string32_destroy(struct string32* s) {
+void utf32_str_destroy(struct utf32_str* s) {
     free(s->data);
     s->data = 0;
     s->size = 0;
     s->capacity = 0;
 }
 
-void string32_copy(struct string32* s, char32_t* buffer, size_t len) {
+void utf32_str_copy(struct utf32_str* s, char32_t* buffer, size_t len) {
     size_t required_capacity = sizeof(char32_t) * len;
 
     while (required_capacity > s->capacity) {
@@ -82,7 +82,7 @@ void string32_copy(struct string32* s, char32_t* buffer, size_t len) {
     s->data[s->size] = 0;
 }
 
-void string32_delete(struct string32* this, size_t pos,
+void utf32_str_delete(struct utf32_str* this, size_t pos,
                      size_t count) {
     if (!count) return;
     assert(count <= this->size);
@@ -93,7 +93,7 @@ void string32_delete(struct string32* this, size_t pos,
     this->data[this->size] = 0;
 }
 
-void string32_insert_buf(struct string32* s, size_t pos,
+void utf32_str_insert_buf(struct utf32_str* s, size_t pos,
                          char32_t* str, size_t len) {
     assert(pos <= s->size);
     size_t required_capacity = (s->size + len) * sizeof(char32_t);
@@ -107,35 +107,21 @@ void string32_insert_buf(struct string32* s, size_t pos,
     memmove(&s->data[pos + len], &s->data[pos],
             (s->size - pos) * sizeof(char32_t));
     memcpy(&s->data[pos], str, len * sizeof(char32_t));
-
     s->size += len;
 }
 
-void string32_clear(struct string32* this) { this->size = 0; }
+void utf32_str_clear(struct utf32_str* this) { this->size = 0; }
 
-void string32_insert_buf_utf8(struct string32* s, size_t pos,
-                              const char* str, size_t len) {
-    assert(pos <= s->size);
-    size_t required_capacity = (s->size + len) * sizeof(char32_t);
-
-    while (required_capacity > s->capacity) {
-        s->capacity *= 2;
-        s->data = realloc(s->data, s->capacity);
-        assert(s->data);
-    }
-
-    memmove(&s->data[pos + len], &s->data[pos],
-            (s->size - pos) * sizeof(char32_t));
-
+void utf32_str_insert_utf8_buf(struct utf32_str* s, size_t pos,
+                              const char* str, const size_t len) {
     char32_t utf32_str[len];
     int failed = ff_utf8_to_utf32(utf32_str, str, len);
     assert(!failed);
 
-    memcpy(&s->data[pos], utf32_str, len * sizeof(char32_t));
-    s->size += len;
+    utf32_str_insert_buf(s, pos, utf32_str, len);
 }
 
-void string32_insert_char(struct string32* s, size_t pos,
+void utf32_str_insert_char(struct utf32_str* s, size_t pos,
                           char32_t chr) {
-    string32_insert_buf(s, pos, &chr, 1);
+    utf32_str_insert_buf(s, pos, &chr, 1);
 }

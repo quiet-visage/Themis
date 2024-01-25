@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../editor/history.h"
-#include "../text/text.h"
+#include "../text/text_view.h"
 
 enum line_editor_flags {
     line_editor_flag_none = 0,
@@ -18,7 +18,7 @@ struct line_editor {
     struct editor_history_stack redo_stack;
     struct text_position selection_begin;
     struct text_position cursor;
-    struct text text;
+    struct text_view text;
     int line_editor_flags;
     enum line_editor_mode line_editor_mode;
 };

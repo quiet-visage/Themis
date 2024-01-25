@@ -8,7 +8,7 @@
 struct file_editor {
     struct utf8_str file_path;
     struct editor editor;
-    struct text status_line_text;
+    struct text_view status_line_text;
 };
 
 struct file_editor file_editor_create(void);

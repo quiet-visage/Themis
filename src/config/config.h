@@ -18,9 +18,14 @@ struct color_scheme {
     int selected_bg;
     int surface0_bg;
     int surface1_bg;
+    int highlight_fg;
     int syntax[token_kind_count_t];
 };
 
-extern struct color_scheme g_color_scheme;
-extern struct layout g_layout;
-extern unsigned char g_scroll_off;
+struct config {
+    struct layout layout;
+    struct color_scheme color_scheme;
+    unsigned char scroll_off;
+};
+
+extern struct config g_cfg;

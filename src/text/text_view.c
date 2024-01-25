@@ -1,4 +1,4 @@
-#include "text.h"
+#include "text_view.h"
 
 #include <assert.h>
 #include <field_fusion/fieldfusion.h>
@@ -13,10 +13,9 @@
 #include "../highlighter/highlighter.h"
 #include "../motion/motion.h"
 #include "cursor.h"
-#include "text.h"
 
 inline static float font_space(float font_size) {
-    return font_size + g_layout.text_spacing;
+    return font_size + g_cfg.layout.text_spacing;
 }
 ulong line_length(struct line line) { return line.end - line.start; }
 struct lines_vector lines_vector_create() {
@@ -49,17 +48,16 @@ void lines_vector_push(struct lines_vector* l, struct line line) {
     l->data[l->size++] = line;
 }
 
-struct text text_create() {
-    struct text result = {0};
+struct text_view text_view_create() {
+    struct text_view result = {0};
     result.scroll_motion = motion_new();
-    result.scroll_motion.f = 1.5f;
+    result.scroll_motion.f = 2.0f;
     result.scroll_motion.z = 1.0f;
     result.scroll_motion.r = -1.f;
     result.glyphs = ff_glyphs_vector_create();
     result.lines = lines_vector_create();
-    result.buffer = string32_create();
-    text_update_lines(&result);
-    // string32_insert_char(&result.buffer, 0, U'\n');
+    result.buffer = utf32_str_create();
+    text_view_update_lines(&result);
 
     result.cursor = cursor_new();
     result.highlighter =
@@ -68,19 +66,19 @@ struct text text_create() {
     return result;
 }
 
-void text_set_syntax_language(struct text* t, enum language lang) {
+void text_view_set_syntax_language(struct text_view* t, enum language lang) {
     t->highlighter.language = lang;
 }
 
-void text_destroy(struct text* t) {
+void text_view_destroy(struct text_view* t) {
     ff_glyphs_vector_destroy(&t->glyphs);
     lines_vector_destroy(&t->lines);
-    string32_destroy(&t->buffer);
+    utf32_str_destroy(&t->buffer);
     hlr_tokens_destroy(&t->tokens);
     hlr_highlighter_destroy(&t->highlighter);
 }
 
-void text_update_lines(struct text* t) {
+void text_view_update_lines(struct text_view* t) {
     lines_vector_clear(&t->lines);
     ulong line_start = 0;
     ulong line_end = 0;
@@ -97,7 +95,7 @@ void text_update_lines(struct text* t) {
                                                .end = line_end});
 }
 
-void text_update_syntax_tree(struct text* t) {
+void text_view_update_syntax_tree(struct text_view* t) {
     char utf8_buffer[t->buffer.size + 1];
 
     if (t->highlighter.language != language_none_t) {
@@ -109,9 +107,9 @@ void text_update_syntax_tree(struct text* t) {
     }
 }
 
-void text_on_modified(struct text* t) {
-    text_update_lines(t);
-    text_update_syntax_tree(t);
+void text_view_on_modified(struct text_view* t) {
+    text_view_update_lines(t);
+    text_view_update_syntax_tree(t);
 }
 
 static void utf32_substr(char32_t* dest, char32_t* src, ulong len) {
@@ -119,11 +117,11 @@ static void utf32_substr(char32_t* dest, char32_t* src, ulong len) {
 }
 
 static int get_token_color(enum token_kind kind) {
-    if (kind == token_kind_unknown_t) return g_color_scheme.fg;
-    return g_color_scheme.syntax[kind];
+    if (kind == token_kind_unknown_t) return g_cfg.color_scheme.fg;
+    return g_cfg.color_scheme.syntax[kind];
 }
 
-static void highlight_glyph_line(struct text* t, size_t* token_index,
+static void highlight_glyph_line(struct text_view* t, size_t* token_index,
                                  size_t len, size_t line_n) {
     static size_t last_row = -1;
     static size_t last_col = -1;
@@ -154,7 +152,7 @@ static void highlight_glyph_line(struct text* t, size_t* token_index,
     }
 }
 
-void text_update_glyphs(struct text* this, struct ff_typography typo,
+void text_view_update_glyphs(struct text_view* this, struct ff_typography typo,
                         Rectangle bounds) {
     if (this->buffer.size == 0) {
         this->glyphs.size = 0;
@@ -165,11 +163,11 @@ void text_update_glyphs(struct text* this, struct ff_typography typo,
 
     size_t token_index = 0;
     for (ulong i = 0; i < this->lines.size; i += 1) {
-        if (text_is_line_above_view(this, typo, i)) {
+        if (text_view_is_line_above_view(this, typo, i)) {
             line_position.y += font_space(typo.size);
             continue;
         }
-        if (text_is_line_below_view(this, typo, bounds, i)) break;
+        if (text_view_is_line_below_view(this, typo, bounds, i)) break;
 
         struct line line = this->lines.data[i];
         ulong line_len = line_length(line);
@@ -193,17 +191,17 @@ void text_update_glyphs(struct text* this, struct ff_typography typo,
     }
 }
 
-bool text_is_line_below_view(struct text* t,
+bool text_view_is_line_below_view(struct text_view* t,
                              struct ff_typography typo,
                              Rectangle bounds, ulong line) {
     line -= line == 0 ? 0 : 1;
     float line_pixel_position =
-        typo.size * line + typo.size + g_layout.text_spacing * line;
+        typo.size * line + typo.size + g_cfg.layout.text_spacing * line;
     float bottom = bounds.height + t->scroll_motion.position[1];
     return line_pixel_position > bottom;
 }
 
-bool text_is_line_above_view(struct text* t,
+bool text_view_is_line_above_view(struct text_view* t,
                              struct ff_typography typo, ulong line) {
     line += 1;
     float line_pixel_pos = line * font_space(typo.size);
@@ -217,7 +215,7 @@ static void swap_ul(ulong* a, ulong* b) {
     *a = *b ^ *a;
 }
 
-void text_select(struct text* t, struct selection sel) {
+void text_view_select(struct text_view* t, struct selection sel) {
     if (sel.from_line > sel.to_line) {
         swap_ul(&sel.from_line, &sel.to_line);
         swap_ul(&sel.from_col, &sel.to_col);
@@ -248,13 +246,13 @@ void text_select(struct text* t, struct selection sel) {
         t->text_flags &= ~text_flag_has_selection;
 }
 
-ulong text_get_mouse_hover_line(struct text* t, float font_size,
+ulong text_view_get_mouse_hover_line(struct text_view* t, float font_size,
                                 Vector2 mouse, float y_offset) {
     ulong result = 0;
     mouse.y += t->scroll_motion.position[1];
     for (size_t i = 0; i < t->lines.size; i += 1) {
         float line_y = i * font_size + y_offset + font_size +
-                       i * g_layout.text_spacing;
+                       i * g_cfg.layout.text_spacing;
         bool mouse_is_in_this_line = line_y > mouse.y;
         if (!mouse_is_in_this_line) continue;
         result = i;
@@ -263,7 +261,7 @@ ulong text_get_mouse_hover_line(struct text* t, float font_size,
     return result;
 }
 
-ulong text_get_mouse_hover_col(struct text* t,
+ulong text_view_get_mouse_hover_col(struct text_view* t,
                                struct ff_typography typo,
                                Vector2 mouse, float x_offset,
                                ulong hovering_line) {
@@ -292,7 +290,7 @@ ulong text_get_mouse_hover_col(struct text* t,
     return result;
 }
 
-void text_handle_mouse(struct text* t, struct ff_typography typo,
+void text_view_handle_mouse(struct text_view* t, struct ff_typography typo,
                        Rectangle bounds) {
     Vector2 mouse = GetMousePosition();
     float is_within_container = CheckCollisionPointRec(mouse, bounds);
@@ -302,8 +300,8 @@ void text_handle_mouse(struct text* t, struct ff_typography typo,
 
     if (is_pressed) {
         t->mouse_press_start_line =
-            text_get_mouse_hover_line(t, typo.size, mouse, bounds.y);
-        t->mouse_press_start_col = text_get_mouse_hover_col(
+            text_view_get_mouse_hover_line(t, typo.size, mouse, bounds.y);
+        t->mouse_press_start_col = text_view_get_mouse_hover_col(
             t, typo, mouse, bounds.x, t->mouse_press_start_line);
         t->text_flags |= text_flag_mouse_was_pressed;
         return;
@@ -312,10 +310,10 @@ void text_handle_mouse(struct text* t, struct ff_typography typo,
     bool is_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
     if (is_down && t->text_flags & text_flag_mouse_was_pressed) {
         ulong end_mouse_press_line =
-            text_get_mouse_hover_line(t, typo.size, mouse, bounds.y);
-        ulong end_mouse_press_col = text_get_mouse_hover_col(
+            text_view_get_mouse_hover_line(t, typo.size, mouse, bounds.y);
+        ulong end_mouse_press_col = text_view_get_mouse_hover_col(
             t, typo, mouse, bounds.x, end_mouse_press_line);
-        text_select(t, (struct selection){
+        text_view_select(t, (struct selection){
                            .from_line = t->mouse_press_start_line,
                            .from_col = t->mouse_press_start_col,
                            .to_line = end_mouse_press_line,
@@ -341,14 +339,14 @@ static size_t text_visible_lines_cout(size_t size, float height) {
 }
 
 void text_scroll_with_cursor_vertically(
-    struct text* t, struct ff_typography typo, Rectangle bounds,
+    struct text_view* t, struct ff_typography typo, Rectangle bounds,
     struct text_position curs_pos) {
     float glyph_offset = font_space(typo.size);
     size_t max_scroll_off =
         text_visible_lines_cout(font_space(typo.size),
                                 bounds.height) *
         .5f;
-    size_t scroll_off = min(g_scroll_off, max_scroll_off);
+    size_t scroll_off = min(g_cfg.scroll_off, max_scroll_off);
     {  // bottom scroll
         size_t row = curs_pos.row + scroll_off;
         float cursor_pixel_position = font_space(typo.size) * row;
@@ -364,7 +362,7 @@ void text_scroll_with_cursor_vertically(
         long row = curs_pos.row - scroll_off;
         row = row > 0 ? row : 0;
         float cursor_pixel_position =
-            bounds.y + (row < 1 ? g_layout.text_spacing
+            bounds.y + (row < 1 ? g_cfg.layout.text_spacing
                                 : font_space(typo.size) * row);
         float top = bounds.y + t->scroll.vertical;
         bool cursor_is_out_of_view = cursor_pixel_position < top;
@@ -374,7 +372,7 @@ void text_scroll_with_cursor_vertically(
 }
 
 void text_scroll_with_cursor_horizontally(
-    struct text* t, struct ff_typography typo, Rectangle bounds,
+    struct text_view* t, struct ff_typography typo, Rectangle bounds,
     struct text_position curs_pos) {
     struct line line = t->lines.data[curs_pos.row];
     size_t line_len = line_length(line);
@@ -407,7 +405,7 @@ void text_scroll_with_cursor_horizontally(
     }
 }
 
-void text_scroll_with_cursor(struct text* t,
+void text_view_scroll_with_cursor(struct text_view* t,
                              struct ff_typography typo,
                              Rectangle bounds,
                              struct text_position curs_pos) {
@@ -415,7 +413,7 @@ void text_scroll_with_cursor(struct text* t,
     text_scroll_with_cursor_horizontally(t, typo, bounds, curs_pos);
 }
 
-void text_scroll_with_wheel(struct text* t, struct ff_typography typo,
+void text_view_scroll_with_wheel(struct text_view* t, struct ff_typography typo,
                             Rectangle bounds) {
     Vector2 mouse_position = GetMousePosition();
     bool mouse_within_bounds =
@@ -431,7 +429,7 @@ void text_scroll_with_wheel(struct text* t, struct ff_typography typo,
                              bounds.height * 0.5f;
 }
 
-static float text_get_cursor_x(struct text* t,
+static float text_get_cursor_x(struct text_view* t,
                                struct ff_typography typo,
                                Rectangle bounds,
                                struct text_position pos) {
@@ -453,11 +451,11 @@ static float text_get_cursor_x(struct text* t,
 }
 
 static void text_draw_single_line_selection(
-    struct text* t, struct ff_typography typo, Rectangle bounds,
+    struct text_view* t, struct ff_typography typo, Rectangle bounds,
     ulong row, ulong col, ulong length, Color bg_color) {
     if (length == 0) return;
-    if (text_is_line_above_view(t, typo, row)) return;
-    if (text_is_line_below_view(t, typo, bounds, row)) return;
+    if (text_view_is_line_above_view(t, typo, row)) return;
+    if (text_view_is_line_below_view(t, typo, bounds, row)) return;
 
     float y = row * font_space(typo.size) + bounds.y +
               -t->scroll_motion.position[1];
@@ -491,7 +489,7 @@ static void text_draw_single_line_selection(
     DrawRectangleRec(selected_area, bg_color);
 }
 
-static void text_draw_selection(struct text* t,
+static void text_draw_selection(struct text_view* t,
                                 struct ff_typography typo,
                                 struct selection selection,
                                 Rectangle bounds, Color bg_color) {
@@ -499,19 +497,19 @@ static void text_draw_selection(struct text* t,
     ulong end_line = selection.to_line;
 
     ulong first_visible_line = 0ul;
-    while (text_is_line_above_view(t, typo, first_visible_line))
+    while (text_view_is_line_above_view(t, typo, first_visible_line))
         first_visible_line += 1;
 
     ulong last_visible_line = first_visible_line;
     while (
-        !text_is_line_below_view(t, typo, bounds, last_visible_line))
+        !text_view_is_line_below_view(t, typo, bounds, last_visible_line))
         last_visible_line += 1;
 
-    if (text_is_line_below_view(t, typo, bounds, first_visible_line))
+    if (text_view_is_line_below_view(t, typo, bounds, first_visible_line))
         last_visible_line -= 1;
 
-    if (text_is_line_above_view(t, typo, end_line)) return;
-    if (text_is_line_below_view(t, typo, bounds, start_line)) return;
+    if (text_view_is_line_above_view(t, typo, end_line)) return;
+    if (text_view_is_line_below_view(t, typo, bounds, start_line)) return;
 
     bool selection_is_out_of_view =
         (start_line > last_visible_line) ||
@@ -532,8 +530,8 @@ static void text_draw_selection(struct text* t,
     }
 
     for (size_t i = start_line; i <= end_line; i++) {
-        if (text_is_line_above_view(t, typo, i)) continue;
-        if (text_is_line_below_view(t, typo, bounds, i)) return;
+        if (text_view_is_line_above_view(t, typo, i)) continue;
+        if (text_view_is_line_below_view(t, typo, bounds, i)) return;
 
         struct line line = t->lines.data[i];
         ulong line_len = line_length(line);
@@ -558,11 +556,11 @@ static void text_draw_selection(struct text* t,
     }
 }
 
-void text_draw(struct text* this, struct ff_typography typo,
+void text_view_draw(struct text_view* this, struct ff_typography typo,
                Rectangle bounds, int focus_flags) {
     if ((focus_flags & focus_flag_can_scroll) &&
         CheckCollisionPointRec(GetMousePosition(), bounds))
-        text_scroll_with_wheel(this, typo, bounds);
+        text_view_scroll_with_wheel(this, typo, bounds);
 
     motion_update(
         &this->scroll_motion,
@@ -572,11 +570,11 @@ void text_draw(struct text* this, struct ff_typography typo,
     BeginScissorMode(bounds.x, bounds.y, bounds.width, bounds.height);
     if (this->text_flags & text_flag_has_selection) {
         text_draw_selection(this, typo, this->selection, bounds,
-                            GetColor(g_color_scheme.text_sel_bg));
+                            GetColor(g_cfg.color_scheme.text_sel_bg));
         rlDrawRenderBatchActive();
     }
 
-    text_update_glyphs(this, typo, bounds);
+    text_view_update_glyphs(this, typo, bounds);
     float projection[4][4];
     struct ff_ortho_params projection_params = {
         .scr_left = this->scroll_motion.position[0],
@@ -594,26 +592,26 @@ void text_draw(struct text* this, struct ff_typography typo,
 }
 
 static void text_search_highlight_matches(
-    struct text* t, struct text_search_highlight* search_highlights,
+    struct text_view* t, struct text_search_highlight* search_highlights,
     struct ff_typography typo, Rectangle bounds) {
     for (size_t i = 0; i < search_highlights->count; i += 1) {
         text_draw_selection(t, typo, search_highlights->highlights[i],
                             bounds,
-                            GetColor(g_color_scheme.selected_bg));
+                            GetColor(g_cfg.color_scheme.selected_bg));
     }
 }
 
-void text_draw_with_cursor(
-    struct text* this, struct ff_typography typo, Rectangle bounds,
+void text_view_draw_with_cursor(
+    struct text_view* this, struct ff_typography typo, Rectangle bounds,
     struct text_position pos, bool cursor_moved, int focus_flags,
     struct text_search_highlight* search_highlights) {
     assert(pos.row < this->lines.size);
 
     if (cursor_moved)
-        text_scroll_with_cursor(this, typo, bounds, pos);
+        text_view_scroll_with_cursor(this, typo, bounds, pos);
     else if ((focus_flags & focus_flag_can_scroll) &&
              CheckCollisionPointRec(GetMousePosition(), bounds)) {
-        text_scroll_with_wheel(this, typo, bounds);
+        text_view_scroll_with_wheel(this, typo, bounds);
     }
 
     motion_update(
@@ -625,16 +623,17 @@ void text_draw_with_cursor(
 
     if (this->text_flags & text_flag_has_selection) {
         text_draw_selection(this, typo, this->selection, bounds,
-                            GetColor(g_color_scheme.text_sel_bg));
+                            GetColor(g_cfg.color_scheme.text_sel_bg));
         rlDrawRenderBatchActive();
     }
 
     if (search_highlights) {
         text_search_highlight_matches(this, search_highlights, typo,
                                       bounds);
+        rlDrawRenderBatchActive();
     }
 
-    text_handle_mouse(this, typo, bounds);
+    text_view_handle_mouse(this, typo, bounds);
 
     if (focus_flags & focus_flag_can_interact) {
         this->cursor.flags |= cursor_flag_focused_t;
@@ -652,7 +651,7 @@ void text_draw_with_cursor(
                      -this->scroll_motion.position[1] + bounds.y;
     cursor_draw(&this->cursor, cursor_x, cursor_y);
 
-    text_update_glyphs(this, typo, bounds);
+    text_view_update_glyphs(this, typo, bounds);
     float projection[4][4];
     struct ff_ortho_params projection_params = {
         .scr_left = this->scroll_motion.position[0],
@@ -669,11 +668,11 @@ void text_draw_with_cursor(
     EndScissorMode();
 }
 
-void text_clear_selection(struct text* t) {
+void text_view_clear_selection(struct text_view* t) {
     t->text_flags &= ~text_flag_has_selection;
 }
 
-void text_clear(struct text* t) {
+void text_view_clear(struct text_view* t) {
     t->buffer.size = 0;
-    text_update_lines(t);
+    text_view_update_lines(t);
 }

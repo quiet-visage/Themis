@@ -2,7 +2,7 @@
 #include <field_fusion/fieldfusion.h>
 #include <raylib.h>
 
-#include "../text/text.h"
+#include "../text/text_view.h"
 #include "history.h"
 #include "line_editor.h"
 
@@ -28,7 +28,7 @@ struct editor {
     struct editor_history_stack undo_stack;
     struct editor_history_stack redo_stack;
     struct text_position cursor;
-    struct text text;
+    struct text_view text;
     int editor_flags;
     enum editor_mode editor_mode;
     struct text_position selection_begin;

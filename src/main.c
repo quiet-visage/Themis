@@ -12,7 +12,6 @@
 #include "resources/resources.h"
 #include "text/cursor.h"
 #include "text/file_editor.h"
-#include "text/text.h"
 #include "tile_layout.h"
 
 struct focus {
@@ -42,11 +41,10 @@ int main(void) {
     hlr_init();
     cursor_initialize();
     preview_init();
-    pane_controller_init(
-        (Rectangle){.x = 100,
-                    .y = 100,
-                    .width = GetScreenWidth() - 200,
-                    .height = GetScreenHeight() - 200});
+    pane_controller_init((Rectangle){.x = 100,
+                                     .y = 10,
+                                     .width = GetScreenWidth() - 200,
+                                     .height = GetScreenHeight()-20});
 
     struct file_picker file_picker = file_picker_create();
 
@@ -66,8 +64,8 @@ int main(void) {
         pane_controler_draw(typo, focus.pane_flags);
 
         if (focus.picker_flags & focus_flag_can_interact) {
-            const char* result = file_picker_perform(&file_picker, typo,
-                                focus.picker_flags);
+            const char* result = file_picker_perform(
+                &file_picker, typo, focus.picker_flags);
             if (IsKeyPressed(KEY_ESCAPE)) {
                 focus_pane_controller(&focus);
             }
@@ -80,9 +78,9 @@ int main(void) {
         if (IsWindowResized()) {
             pane_controller_update_bounds(
                 (Rectangle){.x = 100,
-                            .y = 100,
+                            .y = 10,
                             .width = GetScreenWidth() - 200,
-                            .height = GetScreenHeight() - 200});
+                            .height = GetScreenHeight()-20});
         }
 
         if (IsKeyPressed(KEY_F1)) {

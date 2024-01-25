@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../text/text.h"
+#include "../text/text_view.h"
 
 struct file_preview {
     const char* path;
-    struct text text;
-    size_t path_last_modified;
+    struct text_view text;
+    long path_last_modified;
 };
 
 void preview_init(void);
