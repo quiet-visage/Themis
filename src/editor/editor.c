@@ -94,7 +94,7 @@ char32_t* str32str32(char32_t* pattern, size_t pattern_length,
 
 static size_t text_get_index_line_num(struct editor* this,
                                       size_t index) {
-    assert(index < this->text.buffer.size);
+    assert(index < this->text.buffer->size);
 
     for (size_t i = 0; i < this->text.lines.size; i += 1)
         if (index >= this->text.lines.data[i].start &&
@@ -105,17 +105,17 @@ static size_t text_get_index_line_num(struct editor* this,
 }
 
 static void editor_search_highlights_find(struct editor* this) {
-    if (this->text.buffer.size == 0) return;
-    assert(this->search_editor.text.buffer.size > 0);
+    if (this->text.buffer->size == 0) return;
+    assert(this->search_editor.text.buffer->size > 0);
 
     char32_t* sub_str_ptr = 0;
     size_t search_pos = 0;
     while ((sub_str_ptr =
-                str32str32(this->search_editor.text.buffer.data,
-                           this->search_editor.text.buffer.size,
-                           &this->text.buffer.data[search_pos],
-                           this->text.buffer.size - search_pos))) {
-        size_t match_pos = sub_str_ptr - &this->text.buffer.data[0];
+                str32str32(this->search_editor.text.buffer->data,
+                           this->search_editor.text.buffer->size,
+                           &this->text.buffer->data[search_pos],
+                           this->text.buffer->size - search_pos))) {
+        size_t match_pos = sub_str_ptr - &this->text.buffer->data[0];
         size_t match_line_num =
             text_get_index_line_num(this, match_pos);
         size_t match_column =
@@ -128,23 +128,24 @@ static void editor_search_highlights_find(struct editor* this) {
                 .from_col = match_column,
                 .to_line = match_line_num,
                 .to_col = match_column +
-                          this->search_editor.text.buffer.size});
+                          this->search_editor.text.buffer->size});
 
         size_t next_search_pos =
-            match_pos + this->search_editor.text.buffer.size;
-        if (next_search_pos > this->text.buffer.size) return;
+            match_pos + this->search_editor.text.buffer->size;
+        if (next_search_pos > this->text.buffer->size) return;
         search_pos = next_search_pos;
     }
 }
 
-struct editor editor_create(void) {
-    struct editor result = {0};
-    result.redo_stack = editor_history_stack_create();
-    result.undo_stack = editor_history_stack_create();
-    result.text = text_view_create();
-    result.search_editor = line_editor_create();
-    result.search_highlights = editor_search_highlights_create();
-    return result;
+void editor_create(struct editor* this){
+    this->redo_stack = editor_history_stack_create();
+    this->undo_stack = editor_history_stack_create();
+    this->text = text_view_create();
+    this->search_editor = line_editor_create();
+    this->search_highlights = editor_search_highlights_create();
+    this->search_editor_buffer = utf32_str_create();
+    this->search_editor.text.buffer = &this->search_editor_buffer;
+    text_view_on_modified(&this->search_editor.text);
 }
 
 static void editor_copy_selection_to_clipboard(struct editor* this) {
@@ -161,7 +162,7 @@ static void editor_copy_selection_to_clipboard(struct editor* this) {
     char utf8_selection_str[count + 1];
     utf8_selection_str[count] = 0;
     ff_utf32_to_utf8(utf8_selection_str,
-                     &this->text.buffer.data[index_begin], count);
+                     &this->text.buffer->data[index_begin], count);
 
     SetClipboardText(utf8_selection_str);
     this->editor_mode = editor_mode_normal;
@@ -183,7 +184,7 @@ static void editor_paste_from_clipboard(struct editor* this) {
     size_t cursor_index =
         this->text.lines.data[this->cursor.row].start +
         this->cursor.column;
-    utf32_str_insert_buf(&this->text.buffer, cursor_index,
+    utf32_str_insert_buf(this->text.buffer, cursor_index,
                         clipboard_utf32, clipboard_utf8_len);
     text_view_on_modified(&this->text);
 
@@ -209,7 +210,7 @@ static void editor_delete_selection(struct editor* e) {
     size_t end_index = line_end.start + e->text.selection.to_col;
     size_t count = end_index - beg_index;
 
-    utf32_str_delete(&e->text.buffer, beg_index, count);
+    utf32_str_delete(e->text.buffer, beg_index, count);
     editor_end_selection_mode(e);
     text_view_on_modified(&e->text);
 }
@@ -225,7 +226,7 @@ void editor_save_history(struct editor* this,
                          struct editor_history_stack* stack) {
     editor_history_stack_push(
         stack,
-        editor_history_create(&this->text.buffer, this->cursor));
+        editor_history_create(this->text.buffer, this->cursor));
 }
 
 static void editor_undo(struct editor* this) {
@@ -234,7 +235,7 @@ static void editor_undo(struct editor* this) {
 
     struct editor_history* top =
         editor_history_stack_top(&this->undo_stack);
-    utf32_str_copy(&this->text.buffer, top->text_buffer.data,
+    utf32_str_copy(this->text.buffer, top->text_buffer.data,
                   top->text_buffer.size);
     this->cursor = top->cursor;
     editor_history_stack_pop(&this->undo_stack);
@@ -247,7 +248,7 @@ static void editor_redo(struct editor* this) {
 
     struct editor_history* top =
         editor_history_stack_top(&this->redo_stack);
-    utf32_str_copy(&this->text.buffer, top->text_buffer.data,
+    utf32_str_copy(this->text.buffer, top->text_buffer.data,
                   top->text_buffer.size);
     this->cursor = top->cursor;
     editor_history_stack_pop(&this->redo_stack);
@@ -260,6 +261,7 @@ void editor_destroy(struct editor* this) {
     line_editor_destroy(&this->search_editor);
     text_view_destroy(&this->text);
     editor_search_highlights_destroy(&this->search_highlights);
+    utf32_str_destroy(&this->search_editor_buffer);
 }
 
 static void editor_backspace(struct editor* this) {
@@ -275,7 +277,7 @@ static void editor_backspace(struct editor* this) {
         this->cursor.column;
     if (cursor_position == 0) return;
 
-    utf32_str_delete(&this->text.buffer, cursor_position - 1, 1);
+    utf32_str_delete(this->text.buffer, cursor_position - 1, 1);
     editor_mov_char_left(this);
     text_view_on_modified(&this->text);
 }
@@ -288,8 +290,8 @@ static void editor_delete(struct editor* this) {
     size_t cursor_position =
         this->text.lines.data[this->cursor.row].start +
         this->cursor.column;
-    if (cursor_position >= this->text.buffer.size) return;
-    utf32_str_delete(&this->text.buffer, cursor_position, 1);
+    if (cursor_position >= this->text.buffer->size) return;
+    utf32_str_delete(this->text.buffer, cursor_position, 1);
     text_view_on_modified(&this->text);
 }
 
@@ -297,7 +299,7 @@ static void editor_insert_char(struct editor* this, char32_t chr) {
     editor_save_history(this, &this->undo_stack);
 
     utf32_str_insert_char(
-        &this->text.buffer,
+        this->text.buffer,
         this->text.lines.data[this->cursor.row].start +
             this->cursor.column,
         chr);
@@ -311,7 +313,7 @@ static void editor_insert_tab(struct editor* this, uint8_t tab_size) {
     char32_t tab[tab_size];
     for (size_t i = 0; i < tab_size; i += 1) tab[i] = U' ';
     utf32_str_insert_buf(
-        &this->text.buffer,
+        this->text.buffer,
         this->text.lines.data[this->cursor.row].start +
             this->cursor.column,
         tab, tab_size);
@@ -382,7 +384,7 @@ static void editor_end_search_input_mode(struct editor* this) {
 }
 
 static void editor_begin_search_mode(struct editor* this) {
-    if (!this->search_editor.text.buffer.size) {
+    if (!this->search_editor.text.buffer->size) {
         this->editor_mode = editor_mode_normal;
         return;
     }
@@ -451,7 +453,7 @@ static void editor_delete_rest_of_line(struct editor* this) {
     size_t start_index = line.start + this->cursor.column;
     size_t delete_len = line.end - start_index;
 
-    utf32_str_delete(&this->text.buffer, start_index, delete_len);
+    utf32_str_delete(this->text.buffer, start_index, delete_len);
     text_view_on_modified(&this->text);
 }
 
@@ -502,6 +504,7 @@ static void editor_move_cursor_on_click(struct editor* e,
 
     e->cursor.row = hover_line;
     e->cursor.column = hover_col;
+    e->editor_flags |= editor_flag_cursor_moved;
 }
 
 static void editor_handle_selection_mode_interactions(
@@ -548,6 +551,7 @@ void editor_handle_search_input_interactions(struct editor* this) {
 static void editor_handle_interactions(struct editor* e,
                                        struct ff_typography typo,
                                        Rectangle bounds) {
+    editor_move_cursor_on_click(e, typo, bounds);
     switch (e->editor_mode) {
         case editor_mode_normal:
             return editor_normal_mode_keybinds(e);

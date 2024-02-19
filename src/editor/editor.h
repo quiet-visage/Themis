@@ -33,11 +33,12 @@ struct editor {
     enum editor_mode editor_mode;
     struct text_position selection_begin;
     struct line_editor search_editor;
+    struct utf32_str search_editor_buffer;
     struct editor_search_highlights search_highlights;
     size_t match_select_counter;
 };
 
-struct editor editor_create(void);
+void editor_create(struct editor* this);
 void editor_destroy(struct editor* e);
 void editor_draw(struct editor* e, struct ff_typography typo,
                  Rectangle bounds, int focus_flags);

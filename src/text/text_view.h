@@ -54,7 +54,7 @@ struct text_view {
     struct motion scroll_motion;
     ulong mouse_press_start_line;
     ulong mouse_press_start_col;
-    struct utf32_str buffer;
+    struct utf32_str* buffer;
     struct selection selection;
     int text_flags;
     struct cursor cursor;

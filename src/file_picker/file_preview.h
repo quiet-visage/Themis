@@ -1,9 +1,10 @@
 #pragma once
 
+#include "../dyn_strings/utf32_string.h"
 #include "../text/text_view.h"
 
 struct file_preview {
-    const char* path;
+    struct utf32_str buffer;
     struct text_view text;
     long path_last_modified;
 };

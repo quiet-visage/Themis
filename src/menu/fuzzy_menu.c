@@ -35,21 +35,6 @@ static uint edit_distance(const char32_t* s1, size_t len1,
     }
 
     return score;
-
-    // uint d[len1 + 1][len2 + 1];
-
-    // d[0][0] = 0;
-    // for (unsigned int i = 1; i <= len1; ++i) d[i][0] = i;
-    // for (unsigned int i = 1; i <= len2; ++i) d[0][i] = i;
-
-    // for (unsigned int i = 1; i <= len1; ++i)
-    //     for (unsigned int j = 1; j <= len2; ++j) {
-    //         d[i][j] = min(
-    //             min(d[i - 1][j] + 1, d[i][j - 1] + 1),
-    //             d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 :
-    //             1));
-    //     }
-    // return d[len1][len2];
 }
 
 static size_t char32_str_len(const char32_t* str) {
@@ -66,23 +51,27 @@ static bool is_key_sticky(int key) {
     return IsKeyPressed(key) || IsKeyPressedRepeat(key);
 }
 
-struct fuzzy_menu fuzzy_menu_create() {
-    struct fuzzy_menu result = {.editor = line_editor_create(),
-                                .vertical_scroll = 0,
-                                .glyphs = ff_glyphs_vector_create(),
-                                .previous_buffer_size = 0,
-                                .selected = 0,
-                                .options = {0},
-                                .options_count = 0,
-                                .motion = motion_new()};
-    result.motion.f = 1.9f;
-    result.motion.z = 0.9f;
-    return result;
+void fuzzy_menu_create(struct fuzzy_menu* o) {
+    o->editor = line_editor_create();
+    o->editor_buffer = utf32_str_create();
+    o->editor.text.buffer = &o->editor_buffer;
+    text_view_on_modified(&o->editor.text);
+    o->vertical_scroll = 0;
+    o->glyphs = ff_glyphs_vector_create();
+    o->previous_buffer_size = 0;
+    o->selected = 0;
+    memset(&o->options, 0,
+           sizeof(struct fuzzy_menu_option) * FUZZY_MENU_OPTIONS_CAP);
+    o->options_count = 0;
+    o->motion = motion_new();
+    o->motion.f = 1.9f;
+    o->motion.z = 0.9f;
 }
 
-void fuzzy_menu_destroy(struct fuzzy_menu* fm) {
-    line_editor_destroy(&fm->editor);
-    ff_glyphs_vector_destroy(&fm->glyphs);
+void fuzzy_menu_destroy(struct fuzzy_menu* o) {
+    utf32_str_destroy(o->editor.text.buffer);
+    line_editor_destroy(&o->editor);
+    ff_glyphs_vector_destroy(&o->glyphs);
 }
 
 static void fuzzy_menu_auto_scroll(struct fuzzy_menu* fm,
@@ -90,7 +79,6 @@ static void fuzzy_menu_auto_scroll(struct fuzzy_menu* fm,
                                    float selected_y,
                                    float options_height) {
     float cursor_pixel_pos = selected_y;
-    // TODO
     {  // top scroll
         float top_position = options_y + fm->vertical_scroll + size;
         if (cursor_pixel_pos < top_position) {
@@ -379,17 +367,18 @@ const char32_t* fuzzy_menu_handle_interactions(
 }
 
 bool fuzzy_menu_buffer_changed(struct fuzzy_menu* fm) {
-    return fm->editor.text.buffer.size != fm->previous_buffer_size;
+    return fm->editor.text.buffer->size != fm->previous_buffer_size;
 }
 
 void fuzzy_menu_on_buffer_change(struct fuzzy_menu* fm) {
     for (size_t i = 0; i < fm->options_count; i += 1) {
         fm->options[i].edit_distance = edit_distance(
-            fm->editor.text.buffer.data, fm->editor.text.buffer.size,
-            fm->options[i].name, fm->options[i].name_len);
+            fm->editor.text.buffer->data,
+            fm->editor.text.buffer->size, fm->options[i].name,
+            fm->options[i].name_len);
     }
     quick_sort_options(fm->options, 0, fm->options_count - 1);
-    fm->previous_buffer_size = fm->editor.text.buffer.size;
+    fm->previous_buffer_size = fm->editor.text.buffer->size;
     fm->selected = 0;
 }
 

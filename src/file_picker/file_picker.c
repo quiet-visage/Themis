@@ -49,8 +49,8 @@ static void file_picker_reload_options(struct file_picker* fp) {
 }
 
 struct file_picker file_picker_create() {
-    struct file_picker result = {.menu = fuzzy_menu_create(),
-                                 .dir = {0}};
+    struct file_picker result = {0};
+    fuzzy_menu_create(&result.menu);
 
     const char* cwd = GetWorkingDirectory();
     size_t cwd_len = strlen(cwd);
@@ -195,7 +195,7 @@ static void file_picker_draw_preview(
                          file_preview_bounds.width,
                          file_preview_bounds.height);
         text_view_draw(&preview->text, typo, file_preview_bounds,
-                  focus_flags);
+                       focus_flags);
         EndScissorMode();
     }
 }
@@ -242,9 +242,9 @@ const char* file_picker_perform(struct file_picker* fp,
             memset(fp->dir, 0, 256);
             memcpy(fp->dir, fp->result, strlen(fp->result));
             file_picker_reload_options(fp);
-
             return NULL;
         }
+
         return fp->result;
     }
 
