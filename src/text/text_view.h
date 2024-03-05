@@ -1,22 +1,16 @@
 #pragma once
 
-#include <field_fusion/fieldfusion.h>
+#include <fieldfusion.h>
 #include <raylib.h>
 #include <sys/types.h>
 
+#include "../buffer.h"
 #include "../dyn_strings/utf32_string.h"
 #include "../focus.h"
 #include "../highlighter/highlighter.h"
 #include "../motion/motion.h"
 #include "cursor.h"
 #include "raylib.h"
-
-struct line {
-    ulong start;
-    ulong end;
-};
-
-ulong line_length(struct line line);
 
 struct selection {
     ulong from_line;
@@ -49,17 +43,14 @@ enum text_flags {
 
 struct text_view {
     struct ff_glyphs_vector glyphs;
-    struct lines_vector lines;
     struct scroll scroll;
     struct motion scroll_motion;
     ulong mouse_press_start_line;
     ulong mouse_press_start_col;
-    struct utf32_str* buffer;
+    struct buffer* buffer;
     struct selection selection;
     int text_flags;
     struct cursor cursor;
-    struct highlighter highlighter;
-    struct tokens tokens;
 };
 
 struct text_search_highlight {
@@ -69,14 +60,9 @@ struct text_search_highlight {
 
 struct text_view text_view_create();
 void text_view_destroy(struct text_view*);
-void text_view_update_lines(struct text_view* t);
 void text_view_update_glyphs(struct text_view* t,
                              struct ff_typography typo,
                              Rectangle bounds);
-void text_view_update_syntax_tree(struct text_view* t);
-void text_view_set_syntax_language(struct text_view* t,
-                                   enum language lang);
-void text_view_on_modified(struct text_view* t);
 bool text_view_is_line_below_view(struct text_view* t,
                                   struct ff_typography typo,
                                   Rectangle bounds, ulong line);
@@ -108,4 +94,3 @@ void text_view_draw_with_cursor(
     struct text_position pos, bool cursor_moved, int focus_flags,
     struct text_search_highlight* search_highlights);
 void text_view_clear_selection(struct text_view* t);
-void text_view_clear(struct text_view* t);

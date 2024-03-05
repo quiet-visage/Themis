@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tree_sitter/src/tree.h"
+#include "tree_sitter/api.h"
 
 typedef unsigned long ulong;
 

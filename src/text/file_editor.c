@@ -1,10 +1,10 @@
 #include "file_editor.h"
 
-#include <field_fusion/fieldfusion.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <uchar.h>
 
+#include "../buffer.h"
 #include "../buffer_handler.h"
 #include "../config/config.h"
 #include "../dyn_strings/utf32_string.h"
@@ -17,28 +17,28 @@
 void file_editor_create(struct file_editor* o) {
     o->file_path = utf8_str_create();
     editor_create(&o->editor);
-    o->status_line_text_buffer = utf32_str_create();
+    buffer_create(&o->status_line_text_buffer, utf32_str_create());
     o->status_line_text_view = text_view_create();
     o->status_line_text_view.buffer = &o->status_line_text_buffer;
     static const char* placeholder = "[scratch]";
     utf8_str_copy(&o->file_path, placeholder, strlen(placeholder));
-    utf32_str_copy_utf8(&o->status_line_text_buffer, placeholder,
-                        strlen(placeholder));
-    text_view_on_modified(&o->status_line_text_view);
+    buffer_copy_utf8(&o->status_line_text_buffer, placeholder,
+                     strlen(placeholder));
 }
 
 void file_editor_destroy(struct file_editor* this) {
     editor_destroy(&this->editor);
     text_view_destroy(&this->status_line_text_view);
     utf8_str_destroy(&this->file_path);
-    utf32_str_destroy(&this->status_line_text_buffer);
+    utf32_str_destroy(&this->status_line_text_buffer.str);
 }
 
 static void file_editor_update_status_line_text(
     struct file_editor* this) {
-
     if (this->file_path.length < 32) {
-        utf32_str_copy_utf8(&this->status_line_text_buffer, this->file_path.data, this->file_path.length);
+        utf32_str_copy_utf8(&this->status_line_text_buffer.str,
+                            this->file_path.data,
+                            this->file_path.length);
         return;
     }
 
@@ -53,7 +53,7 @@ static void file_editor_update_status_line_text(
     }
 
     if (!second_to_last_slash_index) {
-        utf32_str_copy_utf8(this->status_line_text_view.buffer,
+        utf32_str_copy_utf8(&this->status_line_text_buffer.str,
                             this->file_path.data,
                             this->file_path.length);
     }
@@ -71,10 +71,8 @@ static void file_editor_update_status_line_text(
     memcpy(final_name, ellipsis, ellipsis_len);
     memcpy(&final_name[ellipsis_len], short_str_ptr, short_str_len);
 
-    utf32_str_copy_utf8(this->status_line_text_view.buffer,
-                        final_name, final_name_len);
-
-    text_view_on_modified(&this->status_line_text_view);
+    buffer_copy_utf8(this->status_line_text_view.buffer, final_name,
+                     final_name_len);
 }
 
 void file_editor_open(struct file_editor* this,
@@ -84,30 +82,26 @@ void file_editor_open(struct file_editor* this,
     struct buffer* stored_buffer = buffer_handler_get(file_path);
     utf8_str_copy(&this->file_path, file_path, strlen(file_path));
     if (stored_buffer) {
-        this->editor.text.buffer = &stored_buffer->string;
+        this->editor.text.buffer = stored_buffer;
     } else {
         struct buffer* new_buffer =
             buffer_handler_create_buffer(file_path);
-        this->editor.text.buffer = &new_buffer->string;
-        utf32_str_read_file(this->editor.text.buffer, file_path);
+
+        this->editor.text.buffer = new_buffer;
+
+        const char* file_extension = GetFileExtension(file_path);
+        if (file_extension) {
+            enum language file_language =
+                hlr_get_extension_language(file_extension);
+            buffer_syntax_set_language(
+                &this->editor.text.buffer->syntax, file_language);
+        }
+
+        buffer_read_file(this->editor.text.buffer, file_path);
     }
-    file_editor_update_status_line_text(this);
-
-    const char* file_extension = GetFileExtension(file_path);
-    if (file_extension) {
-        enum language file_language =
-            hlr_get_extension_language(file_extension);
-        text_view_set_syntax_language(&this->editor.text,
-                                      file_language);
-    }
-
-    text_view_on_modified(&this->editor.text);
-    editor_save_history(&this->editor, &this->editor.undo_stack);
-
-    this->editor.cursor.row = 0;
-    this->editor.cursor.column = 0;
 
     file_editor_update_status_line_text(this);
+    buffer_save_undo(this->editor.text.buffer);
 }
 
 void file_editor_save(struct file_editor* this) {
@@ -115,12 +109,12 @@ void file_editor_save(struct file_editor* this) {
     FILE* file = fopen(this->file_path.data, "w");
     assert(file != NULL);
 
-    char new_contents[this->editor.text.buffer->size];
-    memset(new_contents, 0, this->editor.text.buffer->size);
-    ff_utf32_to_utf8(new_contents, this->editor.text.buffer->data,
-                     this->editor.text.buffer->size);
+    char new_contents[this->editor.text.buffer->str.size];
+    memset(new_contents, 0, this->editor.text.buffer->str.size);
+    ff_utf32_to_utf8(new_contents, this->editor.text.buffer->str.data,
+                     this->editor.text.buffer->str.size);
 
-    fwrite(new_contents, 1, this->editor.text.buffer->size, file);
+    fwrite(new_contents, 1, this->editor.text.buffer->str.size, file);
     fclose(file);
 }
 
@@ -133,13 +127,13 @@ void file_editor_draw(struct file_editor* this,
                       struct ff_typography typo, Rectangle bounds,
                       int focus_flags) {
     if (focus_flags & focus_flag_can_interact) {
-        if (IsKeyPressed(KEY_F2)) {
+        if (IsKeyPressed(KEY_F3)) {
             file_editor_save(this);
         }
     }
 
     Rectangle editor_bounds = bounds;
-    if (this->status_line_text_view.buffer->size) {
+    if (this->status_line_text_view.buffer->str.size) {
         Rectangle status_line_bounds = bounds;
         status_line_bounds.height =
             typo.size + g_cfg.layout.padding * 2;
@@ -151,10 +145,11 @@ void file_editor_draw(struct file_editor* this,
                                typo.size * .5f;
         {
             float text_width =
-                ff_measure(typo.font,
-                           this->status_line_text_view.buffer->data,
-                           this->status_line_text_view.buffer->size,
-                           typo.size, true)
+                ff_measure(
+                    typo.font,
+                    this->status_line_text_view.buffer->str.data,
+                    this->status_line_text_view.buffer->str.size,
+                    typo.size, true)
                     .width;
 
             status_line_bounds.x = status_line_bounds.x +

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../editor/history.h"
 #include "../text/text_view.h"
 
 enum line_editor_flags {
@@ -14,8 +13,6 @@ enum line_editor_mode {
 };
 
 struct line_editor {
-    struct editor_history_stack undo_stack;
-    struct editor_history_stack redo_stack;
     struct text_position selection_begin;
     struct text_position cursor;
     struct text_view text;

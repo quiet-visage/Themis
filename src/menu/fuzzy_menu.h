@@ -26,7 +26,6 @@ struct fuzzy_menu_option {
 
 struct fuzzy_menu {
     struct line_editor editor;
-    struct utf32_str editor_buffer;
     float vertical_scroll;
     struct ff_glyphs_vector glyphs;
     size_t previous_buffer_size;

@@ -4,7 +4,7 @@
 #include "../text/text_view.h"
 
 struct file_preview {
-    struct utf32_str buffer;
+    struct buffer buffer;
     struct text_view text;
     long path_last_modified;
 };

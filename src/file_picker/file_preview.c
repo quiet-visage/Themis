@@ -1,7 +1,7 @@
 #include "file_preview.h"
 
 #include <assert.h>
-#include <field_fusion/fieldfusion.h>
+#include <fieldfusion.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,26 +26,28 @@ struct map {
 static struct map file_preview_cache = {0};
 
 void file_preview_create(struct file_preview* o, const char* path) {
-    o->buffer = utf32_str_create();
+    buffer_create(&o->buffer, utf32_str_create());
     o->path_last_modified = GetFileModTime(path);
     o->text = text_view_create();
     o->text.buffer = &o->buffer;
 
-    utf32_str_read_file(o->text.buffer, path);
+    buffer_read_file(o->text.buffer, path);
 
     const char* file_extension = GetFileExtension(path);
     if (file_extension) {
         enum language file_language =
             hlr_get_extension_language(file_extension);
-        text_view_set_syntax_language(&o->text, file_language);
+        buffer_syntax_set_language(&o->text.buffer->syntax,
+                                   file_language);
+        buffer_syntax_update(&o->text.buffer->syntax,
+                             o->text.buffer->str.data,
+                             o->text.buffer->str.size);
     }
-
-    text_view_on_modified(&o->text);
 }
 
 static void file_preview_destroy(struct file_preview* fp) {
     text_view_destroy(&fp->text);
-    utf32_str_destroy(&fp->buffer);
+    buffer_destroy(&fp->buffer);
 }
 
 static size_t path_key_hash(const char* path) {
@@ -104,11 +106,22 @@ static void map_assign_path_to_key(char* key, const char* path) {
     size_t path_len = strlen(path);
 
     if (path_len > FILE_PREVIEW_PATH_CAP) {
-        memcpy(key, &path[path_len - FILE_PREVIEW_PATH_CAP], FILE_PREVIEW_PATH_CAP);
+        memcpy(key, &path[path_len - FILE_PREVIEW_PATH_CAP],
+               FILE_PREVIEW_PATH_CAP);
         return;
     }
 
     memcpy(key, path, path_len);
+}
+
+static struct map_entry* map_ll_find(struct map_entry* entry, const char* key) {
+    assert(entry);
+    size_t key_len = strlen(key);
+    while (entry) {
+        if (!strncmp(entry->key, key, key_len)) return entry;
+        entry = entry->next;
+    }
+    return NULL;
 }
 
 static void map_update_entry(struct map* o, const char* path) {
@@ -123,10 +136,23 @@ static void map_update_entry(struct map* o, const char* path) {
         long file_mod_time = GetFileModTime(path);
         if (file_mod_time > entry->file_preview.path_last_modified) {
             entry->file_preview.path_last_modified = file_mod_time;
-            utf32_str_read_file(&entry->file_preview.buffer, path);
-            text_view_on_modified(&entry->file_preview.text);
+            buffer_read_file(&entry->file_preview.buffer, path);
         }
     } else {
+        struct map_entry* ll_entry = map_ll_find(entry, path);
+
+        if (ll_entry) {
+            long file_mod_time = GetFileModTime(path);
+            if (file_mod_time >
+                ll_entry->file_preview.path_last_modified) {
+                ll_entry->file_preview.path_last_modified =
+                    file_mod_time;
+                buffer_read_file(&ll_entry->file_preview.buffer,
+                                 path);
+            }
+            return;
+        }
+
         struct map_entry* tail = map_ll_tail(entry);
         tail->next = calloc(sizeof(struct map_entry), 1);
         map_assign_path_to_key(tail->next->key, path);

@@ -1,6 +1,6 @@
 #include "fuzzy_menu.h"
 
-#include <field_fusion/fieldfusion.h>
+#include <fieldfusion.h>
 #include <math.h>
 #include <raylib.h>
 #include <rlgl.h>
@@ -53,9 +53,8 @@ static bool is_key_sticky(int key) {
 
 void fuzzy_menu_create(struct fuzzy_menu* o) {
     o->editor = line_editor_create();
-    o->editor_buffer = utf32_str_create();
-    o->editor.text.buffer = &o->editor_buffer;
-    text_view_on_modified(&o->editor.text);
+    o->editor.text.buffer = malloc(sizeof(struct buffer));
+    buffer_create(o->editor.text.buffer, utf32_str_create());
     o->vertical_scroll = 0;
     o->glyphs = ff_glyphs_vector_create();
     o->previous_buffer_size = 0;
@@ -69,7 +68,8 @@ void fuzzy_menu_create(struct fuzzy_menu* o) {
 }
 
 void fuzzy_menu_destroy(struct fuzzy_menu* o) {
-    utf32_str_destroy(o->editor.text.buffer);
+    buffer_destroy(o->editor.text.buffer);
+    free(o->editor.text.buffer);
     line_editor_destroy(&o->editor);
     ff_glyphs_vector_destroy(&o->glyphs);
 }
@@ -367,18 +367,19 @@ const char32_t* fuzzy_menu_handle_interactions(
 }
 
 bool fuzzy_menu_buffer_changed(struct fuzzy_menu* fm) {
-    return fm->editor.text.buffer->size != fm->previous_buffer_size;
+    return fm->editor.text.buffer->str.size !=
+           fm->previous_buffer_size;
 }
 
 void fuzzy_menu_on_buffer_change(struct fuzzy_menu* fm) {
     for (size_t i = 0; i < fm->options_count; i += 1) {
         fm->options[i].edit_distance = edit_distance(
-            fm->editor.text.buffer->data,
-            fm->editor.text.buffer->size, fm->options[i].name,
+            fm->editor.text.buffer->str.data,
+            fm->editor.text.buffer->str.size, fm->options[i].name,
             fm->options[i].name_len);
     }
     quick_sort_options(fm->options, 0, fm->options_count - 1);
-    fm->previous_buffer_size = fm->editor.text.buffer->size;
+    fm->previous_buffer_size = fm->editor.text.buffer->str.size;
     fm->selected = 0;
 }
 

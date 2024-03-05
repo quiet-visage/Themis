@@ -5,7 +5,7 @@
 
 #include "buffer_handler.h"
 #include "dyn_strings/utf32_string.h"
-#include "field_fusion/fieldfusion.h"
+#include "fieldfusion.h"
 
 void pane_controller_init(Rectangle bounds);
 void pane_controller_update_bounds(Rectangle bounds);

@@ -1,5 +1,5 @@
 #pragma once
-#include <field_fusion/fieldfusion.h>
+#include <fieldfusion.h>
 #include <raylib.h>
 
 #include "../dyn_strings/utf32_string.h"
@@ -7,11 +7,10 @@
 #include "../editor/editor.h"
 
 struct file_editor {
-    // TODO struct buffer* ?
     struct utf8_str file_path;
     struct editor editor;
     struct text_view status_line_text_view;
-    struct utf32_str status_line_text_buffer;
+    struct buffer status_line_text_buffer;
 };
 
 void file_editor_create(struct file_editor* o);

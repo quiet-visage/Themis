@@ -1,6 +1,6 @@
 #include "file_picker.h"
 
-#include <field_fusion/fieldfusion.h>
+#include <fieldfusion.h>
 #include <uchar.h>
 
 #include "../config/config.h"

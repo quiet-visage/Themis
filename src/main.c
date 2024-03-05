@@ -1,4 +1,3 @@
-#include <field_fusion/fieldfusion.h>
 #include <raylib.h>
 #include <string.h>
 #include <uchar.h>
@@ -57,7 +56,6 @@ int main(void) {
     buffer_handler_init();
     buffer_picker_init();
     buffer_picker_update();
-
     pane_controller_init(
         (Rectangle){.x = 100,
                     .y = 10,
@@ -66,11 +64,8 @@ int main(void) {
 
     struct file_picker file_picker = file_picker_create();
 
-    int maple_mono =
-        ff_new_font("/usr/share/fonts/TTF/mplus-2m-regular.ttf",
-                    ff_default_font_config());
     struct ff_typography typo = {
-        .font = maple_mono, .size = 14.f, .color = 0xffffffff};
+        .font = 0, .size = 14.f, .color = 0xffffffff};
 
     struct focus focus = {0};
 
@@ -134,5 +129,7 @@ int main(void) {
     preview_terminate();
     buffer_handler_terminate();
     buffer_picker_terminate();
+    CloseWindow();
+
     return 0;
 }

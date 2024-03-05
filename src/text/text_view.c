@@ -1,7 +1,7 @@
 #include "text_view.h"
 
 #include <assert.h>
-#include <field_fusion/fieldfusion.h>
+#include <fieldfusion.h>
 #include <raylib.h>
 #include <rlgl.h>
 #include <stdlib.h>
@@ -17,38 +17,6 @@
 inline static float font_space(float font_size) {
     return font_size + g_cfg.layout.text_spacing;
 }
-ulong line_length(struct line line) { return line.end - line.start; }
-struct lines_vector lines_vector_create() {
-    static const ulong initial_prealloc_n = 4;
-    struct lines_vector result = {0};
-    result.capacity = sizeof(struct line) * initial_prealloc_n;
-    result.data = calloc(sizeof(struct line), initial_prealloc_n);
-    assert(result.data);
-    return result;
-}
-
-void lines_vector_destroy(struct lines_vector* l) {
-    free(l->data);
-    l->data = NULL;
-    l->capacity = 0;
-    l->size = 0;
-}
-
-void lines_vector_clear(struct lines_vector* l) { l->size = 0; }
-
-void lines_vector_push(struct lines_vector* l, struct line line) {
-    ulong new_size = sizeof(struct line) * (l->size + 1);
-
-    if (new_size > l->capacity) {
-        l->capacity *= 2;
-        l->data = realloc(l->data, l->capacity);
-        assert(l->data);
-    }
-
-    l->data[l->size] = line;
-    l->size += 1;
-}
-
 struct text_view text_view_create() {
     struct text_view result = {0};
     result.scroll_motion = motion_new();
@@ -56,66 +24,13 @@ struct text_view text_view_create() {
     result.scroll_motion.z = 1.0f;
     result.scroll_motion.r = -1.f;
     result.glyphs = ff_glyphs_vector_create();
-    result.lines = lines_vector_create();
     result.buffer = NULL;
-    text_view_update_lines(&result);
-
     result.cursor = cursor_new();
-    result.highlighter =
-        hlr_highlighter_create(language_none_t, NULL, 0);
-    result.tokens = hlr_tokens_create();
     return result;
-}
-
-void text_view_set_syntax_language(struct text_view* t,
-                                   enum language lang) {
-    t->highlighter.language = lang;
 }
 
 void text_view_destroy(struct text_view* t) {
     ff_glyphs_vector_destroy(&t->glyphs);
-    lines_vector_destroy(&t->lines);
-    hlr_tokens_destroy(&t->tokens);
-    hlr_highlighter_destroy(&t->highlighter);
-}
-
-void text_view_update_lines(struct text_view* this) {
-    lines_vector_clear(&this->lines);
-    if (!this->buffer) return;
-
-    ulong line_start = 0;
-    ulong line_end = 0;
-    for (ulong i = 0; i < this->buffer->size; i += 1) {
-        if (this->buffer->data[i] != '\n') continue;
-        line_end = i;
-        lines_vector_push(
-            &this->lines,
-            (struct line){.start = line_start, .end = line_end});
-        line_start = i + 1;
-    }
-    line_end = this->buffer->size;
-    lines_vector_push(&this->lines, (struct line){.start = line_start,
-                                                  .end = line_end});
-}
-
-void text_view_update_syntax_tree(struct text_view* this) {
-    if (!this->buffer) return;
-
-    char utf8_buffer[this->buffer->size + 1];
-
-    if (this->highlighter.language != language_none_t) {
-        utf8_buffer[this->buffer->size] = 0;
-        ff_utf32_to_utf8(utf8_buffer, this->buffer->data,
-                         this->buffer->size);
-        hlr_highlighter_update(&this->highlighter, utf8_buffer,
-                               this->buffer->size);
-        hlr_tokens_update(&this->highlighter, &this->tokens);
-    }
-}
-
-void text_view_on_modified(struct text_view* t) {
-    text_view_update_lines(t);
-    text_view_update_syntax_tree(t);
 }
 
 static void utf32_substr(char32_t* dest, char32_t* src, ulong len) {
@@ -132,8 +47,8 @@ static void highlight_glyph_line(struct text_view* t,
                                  size_t line_n) {
     static size_t last_row = -1;
     static size_t last_col = -1;
-    for (; *token_index < t->tokens.size; *token_index += 1) {
-        struct token token = t->tokens.data[*token_index];
+    for (; *token_index < t->buffer->syntax.tokens.size; *token_index += 1) {
+        struct token token = t->buffer->syntax.tokens.data[*token_index];
         if (token.position.start.row < line_n ||
             (token.position.start.row == last_row &&
              token.position.start.column == last_col) ||
@@ -162,7 +77,7 @@ static void highlight_glyph_line(struct text_view* t,
 void text_view_update_glyphs(struct text_view* this,
                              struct ff_typography typo,
                              Rectangle bounds) {
-    if (!this->buffer || this->buffer->size == 0) {
+    if (!this->buffer || this->buffer->str.size == 0) {
         this->glyphs.size = 0;
         return;
     }
@@ -170,7 +85,7 @@ void text_view_update_glyphs(struct text_view* this,
     struct ff_position line_position = {.x = bounds.x, .y = bounds.y};
 
     size_t token_index = 0;
-    for (ulong i = 0; i < this->lines.size; i += 1) {
+    for (ulong i = 0; i < this->buffer->lines.length; i += 1) {
         if (text_view_is_line_above_view(this, typo, i)) {
             line_position.y += font_space(typo.size);
             continue;
@@ -178,15 +93,15 @@ void text_view_update_glyphs(struct text_view* this,
         if (text_view_is_line_below_view(this, typo, bounds, i))
             break;
 
-        struct line line = this->lines.data[i];
-        ulong line_len = line_length(line);
-        char32_t line_str[line_len];
-        memset(line_str, 0, sizeof(char32_t) * line_len);
-        utf32_substr(line_str, &this->buffer->data[line.start],
-                     line_len);
+        struct line line = this->buffer->lines.data[i];
+        ulong line_length = line_len(&line);
+        char32_t line_str[line_length];
+        memset(line_str, 0, sizeof(char32_t) * line_length);
+        utf32_substr(line_str, &this->buffer->str.data[line.start],
+                     line_length);
         ff_print_utf32(
             &this->glyphs,
-            (struct ff_utf32_str){.data = line_str, .size = line_len},
+            (struct ff_utf32_str){.data = line_str, .size = line_length},
             (struct ff_print_params){
                 .typography = typo,
                 .print_flags = ff_get_default_print_flags(),
@@ -194,8 +109,8 @@ void text_view_update_glyphs(struct text_view* this,
                 .draw_spaces = false},
             line_position);
 
-        if (this->highlighter.language != language_none_t)
-            highlight_glyph_line(this, &token_index, line_len, i);
+        if (this->buffer->syntax.highlighter.language != language_none_t)
+            highlight_glyph_line(this, &token_index, line_length, i);
         line_position.y += font_space(typo.size);
     }
 }
@@ -241,11 +156,11 @@ void text_view_select(struct text_view* t, struct selection sel) {
     t->selection.to_line = sel.to_line;
     t->selection.to_col = sel.to_col;
 
-    assert(t->selection.from_line < t->lines.size);
-    assert(t->selection.to_line < t->lines.size);
+    assert(t->selection.from_line < t->buffer->lines.length);
+    assert(t->selection.to_line < t->buffer->lines.length);
 
-    ulong from_line_index = t->lines.data[sel.from_line].start;
-    ulong to_line_index = t->lines.data[sel.to_line].start;
+    ulong from_line_index = t->buffer->lines.data[sel.from_line].start;
+    ulong to_line_index = t->buffer->lines.data[sel.to_line].start;
     ulong from = from_line_index + sel.from_col;
     ulong to = to_line_index + sel.to_col;
     ulong selection_char_count = to - from;
@@ -261,7 +176,7 @@ ulong text_view_get_mouse_hover_line(struct text_view* t,
                                      float y_offset) {
     ulong result = 0;
     mouse.y += t->scroll_motion.position[1];
-    for (size_t i = 0; i < t->lines.size; i += 1) {
+    for (size_t i = 0; i < t->buffer->lines.length; i += 1) {
         float line_y = i * font_size + y_offset + font_size +
                        i * g_cfg.layout.text_spacing;
         bool mouse_is_in_this_line = line_y > mouse.y;
@@ -277,15 +192,16 @@ ulong text_view_get_mouse_hover_col(struct text_view* this,
                                     Vector2 mouse, float x_offset,
                                     ulong hovering_line) {
     assert(this->buffer);
-    assert(hovering_line < this->lines.size);
-    struct line matching_line = this->lines.data[hovering_line];
-    ulong matching_line_len = line_length(matching_line);
+    assert(hovering_line < this->buffer->lines.length);
+    struct line matching_line =
+        this->buffer->lines.data[hovering_line];
+    ulong matching_line_len = line_len(&matching_line);
     if (matching_line_len == 0) return 0;
 
     char32_t matching_line_str[matching_line_len + 1];
     matching_line_str[matching_line_len] = 0;
     utf32_substr(matching_line_str,
-                 &this->buffer->data[matching_line.start],
+                 &this->buffer->str.data[matching_line.start],
                  matching_line_len);
 
     ulong result = 0;
@@ -390,13 +306,13 @@ void text_scroll_with_cursor_horizontally(
     struct text_view* this, struct ff_typography typo,
     Rectangle bounds, struct text_position curs_pos) {
     assert(this->buffer);
-    struct line line = this->lines.data[curs_pos.row];
-    size_t line_len = line_length(line);
+    struct line line = this->buffer->lines.data[curs_pos.row];
+    size_t line_length = line_len(&line);
     {  // right horizontal scroll
-        size_t column = min(curs_pos.column + 5, line_len);
+        size_t column = min(curs_pos.column + 5, line_length);
         char32_t line_str[column + 1];
         line_str[column] = 0;
-        utf32_substr(line_str, &this->buffer->data[line.start],
+        utf32_substr(line_str, &this->buffer->str.data[line.start],
                      column);
         struct ff_dimensions measurement =
             ff_measure(typo.font, line_str, column, typo.size, true);
@@ -414,7 +330,7 @@ void text_scroll_with_cursor_horizontally(
                                              : curs_pos.column - 5;
         char32_t line_str[column + 1];
         line_str[column] = 0;
-        utf32_substr(line_str, &this->buffer->data[line.start],
+        utf32_substr(line_str, &this->buffer->str.data[line.start],
                      column);
         struct ff_dimensions measurement =
             ff_measure(typo.font, line_str, column, typo.size, true);
@@ -445,8 +361,8 @@ void text_view_scroll_with_wheel(struct text_view* t,
     t->scroll.vertical += font_space(typo.size) * scrolled * -4;
     if (t->scroll.vertical < 0) t->scroll.vertical = 0;
     if (t->scroll.vertical >
-        font_space(typo.size) * t->lines.size - bounds.height * 0.5f)
-        t->scroll.vertical = font_space(typo.size) * t->lines.size -
+        font_space(typo.size) * t->buffer->lines.length - bounds.height * 0.5f)
+        t->scroll.vertical = font_space(typo.size) * t->buffer->lines.length -
                              bounds.height * 0.5f;
 }
 
@@ -456,12 +372,12 @@ static float text_get_cursor_x(struct text_view* t,
                                struct text_position pos) {
     if (pos.column == 0) return bounds.x;
 
-    struct line cursor_line = t->lines.data[pos.row];
+    struct line cursor_line = t->buffer->lines.data[pos.row];
 
     char32_t cursor_line_str[pos.column + 1];
     cursor_line_str[pos.column] = 0;
-    utf32_substr(cursor_line_str, &t->buffer->data[cursor_line.start],
-                 pos.column);
+    utf32_substr(cursor_line_str,
+                 &t->buffer->str.data[cursor_line.start], pos.column);
 
     float result = ff_measure(typo.font, cursor_line_str, pos.column,
                               typo.size, true)
@@ -482,13 +398,13 @@ static void text_draw_single_line_selection(
               -t->scroll_motion.position[1];
     float x = bounds.x;
 
-    struct line line = t->lines.data[row];
-    assert(line_length(line) >= col + length);
+    struct line line = t->buffer->lines.data[row];
+    assert(line_len(&line) >= col + length);
 
     if (col != 0) {
         char32_t line_str[col + 1];
         line_str[col] = 0;
-        utf32_substr(line_str, &t->buffer->data[line.start], col);
+        utf32_substr(line_str, &t->buffer->str.data[line.start], col);
 
         x += ff_measure(typo.font, line_str, col, typo.size, true)
                  .width;
@@ -497,16 +413,18 @@ static void text_draw_single_line_selection(
     ulong start_index = line.start + col;
     char32_t selected_str[length + 1];
     selected_str[length] = 0;
-    utf32_substr(selected_str, &t->buffer->data[start_index], length);
+    utf32_substr(selected_str, &t->buffer->str.data[start_index],
+                 length);
 
     float width =
         ff_measure(typo.font, selected_str, length, typo.size, true)
             .width;
 
-    Rectangle selected_area = {.x = x,
-                               .y = y,
-                               .width = width - t->scroll_motion.position[0],
-                               .height = font_space(typo.size)};
+    Rectangle selected_area = {
+        .x = x,
+        .y = y,
+        .width = width - t->scroll_motion.position[0],
+        .height = font_space(typo.size)};
     DrawRectangleRec(selected_area, bg_color);
 }
 
@@ -556,13 +474,13 @@ static void text_draw_selection(struct text_view* t,
         if (text_view_is_line_above_view(t, typo, i)) continue;
         if (text_view_is_line_below_view(t, typo, bounds, i)) return;
 
-        struct line line = t->lines.data[i];
-        ulong line_len = line_length(line);
+        struct line line = t->buffer->lines.data[i];
+        ulong line_length = line_len(&line);
 
         bool is_first = i == start_line;
         if (is_first) {
             text_draw_single_line_selection(
-                t, typo, bounds, i, start_col, line_len - start_col,
+                t, typo, bounds, i, start_col, line_length - start_col,
                 bg_color);
             continue;
         }
@@ -575,7 +493,7 @@ static void text_draw_selection(struct text_view* t,
         }
 
         text_draw_single_line_selection(t, typo, bounds, i, 0,
-                                        line_len, bg_color);
+                                        line_length, bg_color);
     }
 }
 
@@ -632,8 +550,7 @@ void text_view_draw_with_cursor(
     int focus_flags,
     struct text_search_highlight* search_highlights) {
     assert(this->buffer && "There should be a buffer to be drawn");
-    assert(pos.row < this->lines.size);
-    text_view_on_modified(this);
+    assert(pos.row < this->buffer->lines.length);
 
     if (cursor_moved)
         text_view_scroll_with_cursor(this, typo, bounds, pos);
@@ -698,9 +615,4 @@ void text_view_draw_with_cursor(
 
 void text_view_clear_selection(struct text_view* t) {
     t->text_flags &= ~text_flag_has_selection;
-}
-
-void text_view_clear(struct text_view* t) {
-    t->buffer->size = 0;
-    text_view_update_lines(t);
 }

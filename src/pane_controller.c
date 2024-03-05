@@ -1,9 +1,10 @@
 #include "pane_controller.h"
 
+#include <fieldfusion.h>
 #include <stdlib.h>
 
 #include "buffer_handler.h"
-#include "field_fusion/fieldfusion.h"
+#include "buffer_syntax.h"
 #include "focus.h"
 #include "highlighter/highlighter.h"
 #include "raylib.h"
@@ -29,9 +30,7 @@ void pane_controller_init(Rectangle bounds) {
     assert(scratch_buffer &&
            "scratch buffer should be created on buffer_handler_init");
     g_file_editors[g_file_editors_count - 1].editor.text.buffer =
-        &scratch_buffer->string;
-    text_view_on_modified(
-        &g_file_editors[g_file_editors_count - 1].editor.text);
+        scratch_buffer;
 }
 
 static void pane_controller_split(enum split_kind split_kind) {
@@ -46,10 +45,10 @@ static void pane_controller_split(enum split_kind split_kind) {
 
     new_file_editor->editor.text.buffer =
         old_file_editor->editor.text.buffer;
-    text_view_set_syntax_language(
-        &new_file_editor->editor.text,
-        old_file_editor->editor.text.highlighter.language);
-    text_view_on_modified(&new_file_editor->editor.text);
+    buffer_syntax_set_language(
+        &new_file_editor->editor.text.buffer->syntax,
+        old_file_editor->editor.text.buffer->syntax.highlighter
+            .language);
     file_editor_set_path(new_file_editor,
                          old_file_editor->file_path.data);
 }
@@ -155,13 +154,12 @@ void pane_controller_set_focused_buffer(struct buffer* buffer) {
     assert(buffer);
     struct file_editor* focused_file_editor =
         &g_file_editors[g_focused_num];
-    focused_file_editor->editor.text.buffer = &buffer->string;
+    focused_file_editor->editor.text.buffer = buffer;
 
     memset(&focused_file_editor->editor.cursor, 0,
            sizeof(struct text_position));
     file_editor_set_path(focused_file_editor, buffer->buffer_name);
-    text_view_set_syntax_language(
-        &focused_file_editor->editor.text,
-        buffer->preview.highlighter.language);
-    text_view_on_modified(&focused_file_editor->editor.text);
+    // text_view_set_syntax_language(
+    //     &focused_file_editor->editor.text,
+    //     buffer->preview.highlighter.language);
 }

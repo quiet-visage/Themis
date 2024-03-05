@@ -13,5 +13,3 @@ void buffer_handler_terminate(void);
 size_t buffer_handler_count(void);
 void buffer_handler_list_names(size_t count,
                                struct utf32_str names[count]);
-void buffer_undo(struct buffer* buffer);
-void buffer_redo(struct buffer* buffer);

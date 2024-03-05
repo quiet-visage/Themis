@@ -1,7 +1,7 @@
 #include "utf32_string.h"
 
 #include <assert.h>
-#include <field_fusion/fieldfusion.h>
+#include <fieldfusion.h>
 #include <stdlib.h>
 #include <string.h>
 #include <uchar.h>
@@ -46,19 +46,19 @@ void utf32_str_copy_utf8(struct utf32_str* s, const char* buffer,
 }
 
 void utf32_str_read_file(struct utf32_str* s, const char* path) {
-    FILE* file = fopen(path, "r");
+    FILE* file = fopen(path, "rb");
     assert(file);
 
     fseek(file, 0, SEEK_END);
     size_t file_size = ftell(file);
     rewind(file);
 
-    char file_contents[file_size + 1];
-    file_contents[file_size] = 0;
+    char* file_contents = calloc(1, file_size + 1);
     fread(file_contents, 1, file_size, file);
     fclose(file);
 
     utf32_str_copy_utf8(s, file_contents, file_size);
+    free(file_contents);
 }
 
 void utf32_str_destroy(struct utf32_str* s) {
