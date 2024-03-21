@@ -2,7 +2,7 @@
 
 #include <sys/types.h>
 
-#include "../motion/motion.h"
+#include "motion.h"
 
 enum cursor_flags {
     cursor_flag_recently_moved_t = (1 << 0),

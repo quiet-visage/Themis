@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../dyn_strings/utf32_string.h"
-#include "../text/text_view.h"
+#include "../text_view.h"
 
 struct file_preview {
     struct buffer buffer;

@@ -106,18 +106,18 @@ void hlr_terminate() {
 struct tokens hlr_tokens_create() {
     struct tokens tokens = {
         .data = (struct token *)calloc(2, sizeof(struct token)),
-        .size = 0,
+        .length = 0,
         .capacity = sizeof(struct token) * 2,
     };
     return tokens;
 }
 
 static void hlr_tokens_reset(struct tokens *tokens) {
-    tokens->size = 0;
+    tokens->length = 0;
 }
 
 static void tokens_push(struct tokens *o, struct token token) {
-    ulong new_size = sizeof(struct token) * (o->size + 1);
+    ulong new_size = sizeof(struct token) * (o->length + 1);
 
     if (new_size > o->capacity) {
         o->capacity *= 2;
@@ -125,7 +125,7 @@ static void tokens_push(struct tokens *o, struct token token) {
         assert(o->data != NULL);
     }
 
-    o->data[o->size++] = token;
+    o->data[o->length++] = token;
 };
 
 struct highlighter hlr_highlighter_create(enum language lang,
@@ -140,33 +140,33 @@ struct highlighter hlr_highlighter_create(enum language lang,
         .language = lang};
 }
 
-void hlr_highlighter_destroy(struct highlighter *hlr) {
-    ts_tree_delete(hlr->tree);
+void hlr_highlighter_destroy(struct highlighter *m) {
+    ts_tree_delete(m->tree);
 }
 
-void hlr_highlighter_update(struct highlighter *hlr,
+void hlr_highlighter_update(struct highlighter *m,
                             const char *buffer, size_t buffer_size) {
-    ts_parser_set_language(g_parser, g_languages[hlr->language]);
-    if (!hlr->tree) {
-        hlr->tree = ts_parser_parse_string(g_parser, NULL, buffer,
+    ts_parser_set_language(g_parser, g_languages[m->language]);
+    if (!m->tree) {
+        m->tree = ts_parser_parse_string(g_parser, NULL, buffer,
                                            buffer_size);
     } else {
         TSTree *tmp = ts_parser_parse_string(g_parser, NULL, buffer,
                                              buffer_size);
-        ts_tree_delete(hlr->tree);
-        hlr->tree = tmp;
+        ts_tree_delete(m->tree);
+        m->tree = tmp;
     }
 }
 
-void hlr_tokens_update(struct highlighter *hlr, struct tokens *ts) {
-    assert(hlr->language != language_none_t);
-    assert(hlr->tree != NULL);
+void hlr_tokens_update(struct highlighter *m, struct tokens *ts) {
+    assert(m->language != language_none_t);
+    assert(m->tree != NULL);
     hlr_tokens_reset(ts);
-    TSNode root = ts_tree_root_node(hlr->tree);
+    TSNode root = ts_tree_root_node(m->tree);
     assert(!ts_node_is_null(root));
 
     TSQueryCursor *cursor = ts_query_cursor_new();
-    ts_query_cursor_exec(cursor, g_queries[hlr->language], root);
+    ts_query_cursor_exec(cursor, g_queries[m->language], root);
 
     TSQueryMatch match = {0};
     while (ts_query_cursor_next_match(cursor, &match)) {
@@ -174,7 +174,7 @@ void hlr_tokens_update(struct highlighter *hlr, struct tokens *ts) {
         TSPoint end = ts_node_end_point(match.captures->node);
         unsigned name_length = 0;
         const char *name = ts_query_capture_name_for_id(
-            g_queries[hlr->language], match.captures->index,
+            g_queries[m->language], match.captures->index,
             &name_length);
 
         struct token token = {
@@ -194,9 +194,9 @@ enum language hlr_get_extension_language(const char *dot_ext) {
                                  strlen(dot_ext));
 }
 
-void hlr_tokens_destroy(struct tokens *tokens) {
-    free(tokens->data);
-    tokens->data = 0;
-    tokens->size = 0;
-    tokens->capacity = 0;
+void hlr_tokens_destroy(struct tokens *m) {
+    free(m->data);
+    m->data = 0;
+    m->length = 0;
+    m->capacity = 0;
 }

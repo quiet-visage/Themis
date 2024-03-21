@@ -1,10 +1,10 @@
 #include "cursor.h"
 
 #include <math.h>
+#include <raylib.h>
 #include <stdio.h>
 
-#include "../motion/motion.h"
-#include "raylib.h"
+#include "motion.h"
 
 __asm__("g_cursor_frag: .incbin \"shaders/cursor.frag\"");
 __asm__("g_cursor_frag_end: .byte 0");
@@ -53,7 +53,7 @@ static void cursor_handle_alplha_change(struct cursor* this) {
         this->blink_delay_ms -= GetFrameTime() * 1e3;
         if (this->blink_delay_ms <= 0 &&
             (cursor_compute_phase() - .7f) >= -.01f) {
-            this->blink_duration_ms = 8*1e3;
+            this->blink_duration_ms = 8 * 1e3;
             this->flags &= ~_cursor_flag_blink_delay_t;
             this->flags |= _cursor_flag_blink_t;
         }
@@ -71,31 +71,32 @@ static void cursor_handle_alplha_change(struct cursor* this) {
     }
 }
 
-static void draw_cursor_trail(struct cursor* this) {
-    Vector2 top_vertex;
-    Vector2 mid_vertex;
-    Vector2 bot_vertex;
+// static void draw_cursor_trail(struct cursor* this) {
+//     Vector2 top_vertex;
+//     Vector2 mid_vertex;
+//     Vector2 bot_vertex;
 
-    if (this->motion.position[0] < this->smear_motion.position[0]) {
-        top_vertex.x = this->motion.position[0];
-        top_vertex.y = this->motion.position[1];
-        mid_vertex.x = this->motion.position[0];
-        mid_vertex.y = this->motion.position[1] + 12.f;
-        bot_vertex.x = this->smear_motion.position[0];
-        bot_vertex.y = this->smear_motion.position[1] + 6.0f;
-    } else {
-        top_vertex.x = this->motion.position[0];
-        top_vertex.y = this->motion.position[1];
-        mid_vertex.x = this->smear_motion.position[0];
-        mid_vertex.y = this->smear_motion.position[1] + 6.0f;
-        bot_vertex.x = this->motion.position[0];
-        bot_vertex.y = this->motion.position[1] + 12.f;
-    }
+//     if (this->motion.position[0] < this->smear_motion.position[0])
+//     {
+//         top_vertex.x = this->motion.position[0];
+//         top_vertex.y = this->motion.position[1];
+//         mid_vertex.x = this->motion.position[0];
+//         mid_vertex.y = this->motion.position[1] + 12.f;
+//         bot_vertex.x = this->smear_motion.position[0];
+//         bot_vertex.y = this->smear_motion.position[1] + 6.0f;
+//     } else {
+//         top_vertex.x = this->motion.position[0];
+//         top_vertex.y = this->motion.position[1];
+//         mid_vertex.x = this->smear_motion.position[0];
+//         mid_vertex.y = this->smear_motion.position[1] + 6.0f;
+//         bot_vertex.x = this->motion.position[0];
+//         bot_vertex.y = this->motion.position[1] + 12.f;
+//     }
 
-    BeginShaderMode(g_cursor_shader);
-    DrawTriangle(top_vertex, mid_vertex, bot_vertex, SKYBLUE);
-    EndShaderMode();
-}
+//     BeginShaderMode(g_cursor_shader);
+//     DrawTriangle(top_vertex, mid_vertex, bot_vertex, SKYBLUE);
+//     EndShaderMode();
+// }
 
 void cursor_draw(struct cursor* this, float x, float y) {
     cursor_handle_alplha_change(this);

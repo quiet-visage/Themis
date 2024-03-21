@@ -2,8 +2,8 @@
 
 #include <uchar.h>
 
-#include "../editor/line_editor.h"
-#include "../resources/resources.h"
+#include "editor/line_editor.h"
+#include "resources/resources.h"
 
 #define FUZZY_MENU_OPTION_NAME_CAP 256
 #define FUZZY_MENU_OPTIONS_CAP 256

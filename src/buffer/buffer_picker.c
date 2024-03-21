@@ -1,14 +1,14 @@
 #include "buffer_picker.h"
 
+#include <fieldfusion.h>
 #include <uchar.h>
 
+#include "../config.h"
+#include "../dyn_strings/utf32_string.h"
+#include "../fuzzy_menu.h"
+#include "../text_view.h"
 #include "buffer_handler.h"
-#include "config/config.h"
-#include "dyn_strings/utf32_string.h"
-#include <fieldfusion.h>
-#include "menu/fuzzy_menu.h"
 #include "raylib.h"
-#include "text/text_view.h"
 
 struct fuzzy_menu g_fuzzy_menu = {0};
 struct text_view g_text_preview = {0};
@@ -135,7 +135,7 @@ void buffer_picker_update(void) {
 
     for (size_t i = 0; i < buffer_count; i += 1) {
         fuzzy_menu_push_option(&g_fuzzy_menu, buffer_names[i].data,
-                               buffer_names[i].size);
+                               buffer_names[i].length);
         utf32_str_destroy(&buffer_names[i]);
     }
 
@@ -161,6 +161,7 @@ struct buffer* buffer_picker_perform(struct ff_typography typo,
 
     if (g_previous_selected != g_fuzzy_menu.selected) {
         g_text_preview.buffer = selected_buffer;
+        g_previous_selected = g_fuzzy_menu.selected;
     }
 
     Rectangle preview_bounds = (Rectangle){

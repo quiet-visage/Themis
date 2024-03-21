@@ -2,14 +2,19 @@
 
 #include <fieldfusion.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "buffer_handler.h"
-#include "buffer_syntax.h"
+#include "buffer/buffer_handler.h"
+#include "buffer/buffer_syntax.h"
+#include "commands.h"
+#include "config.h"
+#include "editor/editor.h"
+#include "file_editor.h"
 #include "focus.h"
 #include "highlighter/highlighter.h"
+#include "key_seq/key_seq.h"
 #include "raylib.h"
-#include "text/file_editor.h"
-#include "text/text_view.h"
+#include "text_view.h"
 #include "tile_layout.h"
 
 #define FILE_EDITOR_CAP 32
@@ -65,55 +70,69 @@ static inline void pane_controller_focus_prev(void) {
     g_focused_num = tile_get_non_sorted_n(prev_sorted_n);
 }
 
-static void pane_controller_close_focused(void) {
-    if (g_file_editors_count == 1) return;
+static void pane_controller_focus_right(void) {
+    size_t right_n = tile_get_right_of(g_focused_num);
+    if (right_n != (size_t)-1) g_focused_num = right_n;
+}
 
-    if (g_focused_num == g_file_editors_count - 1) {
-        file_editor_destroy(&g_file_editors[g_focused_num]);
-        g_file_editors_count -= 1;
-        pane_controller_focus_prev();
-        tile_remove(g_focused_num);
-        return;
-    }
+static void pane_controller_focus_left(void) {
+    size_t left_n = tile_get_left_of(g_focused_num);
+    if (left_n != (size_t)-1) g_focused_num = left_n;
+}
+
+static void pane_controller_focus_up(void) {
+    size_t up_n = tile_get_up_of(g_focused_num);
+    if (up_n != (size_t)-1) g_focused_num = up_n;
+}
+
+static void pane_controller_focus_down(void) {
+    size_t down_n = tile_get_down_of(g_focused_num);
+    if (down_n != (size_t)-1) g_focused_num = down_n;
+}
+
+static void pane_controller_close_focused(void) {
+    if (g_file_editors_count < 2) return;
 
     file_editor_destroy(&g_file_editors[g_focused_num]);
+
     memmove(&g_file_editors[g_focused_num],
             &g_file_editors[g_focused_num + 1],
-            sizeof(struct file_editor) *
-                (g_file_editors_count - g_focused_num));
+            (g_file_editors_count - (g_focused_num + 1)) *
+                sizeof(struct file_editor));
+
+    pane_controller_focus_prev();
+    tile_remove(g_focused_num);
+
     g_file_editors_count -= 1;
-
-    if (tile_get_sorted_n(g_focused_num) == tile_get_count() - 1) {
-        tile_remove(g_focused_num);
-        pane_controller_focus_prev();
-        g_focused_num += 1;
-    } else {
-        tile_remove(g_focused_num);
-        pane_controller_focus_prev();
-    }
 }
 
-void pane_controller_keybinds(void) {
-    if (IsKeyDown(KEY_LEFT_CONTROL)) {
-        if (IsKeyPressed(KEY_THREE)) {
-            pane_controller_split(split_horizontal);
-        } else if (IsKeyPressed(KEY_FOUR)) {
-            pane_controller_split(split_vertical);
-        } else if (IsKeyPressed(KEY_RIGHT)) {
-            pane_controller_focus_next();
-        } else if (IsKeyPressed(KEY_LEFT)) {
-            pane_controller_focus_prev();
-        } else if (IsKeyPressed(KEY_ZERO)) {
-            pane_controller_close_focused();
-        }
-    }
+static void pane_controller_split_vertical(void) {
+    pane_controller_split(split_vertical);
 }
+
+static void pane_controller_split_horizontal(void) {
+    pane_controller_split(split_horizontal);
+}
+
+void (*g_pane_cmd_table[])(void) = {
+    [pane_cmd_split_vertical] = pane_controller_split_vertical,
+    [pane_cmd_split_horizontal] = pane_controller_split_horizontal,
+    [pane_cmd_close_pane] = pane_controller_close_focused,
+    [pane_cmd_focus_next] = pane_controller_focus_next,
+    [pane_cmd_focus_prev] = pane_controller_focus_prev,
+    [pane_cmd_focus_up] = pane_controller_focus_up,
+    [pane_cmd_focus_down] = pane_controller_focus_down,
+    [pane_cmd_focus_left] = pane_controller_focus_left,
+    [pane_cmd_focus_right] = pane_controller_focus_right,
+};
 
 void pane_controler_draw(struct ff_typography typo, int focus_flags) {
-    if (focus_flags & focus_flag_can_interact) {
-        pane_controller_keybinds();
-    }
     assert(g_file_editors_count == tile_get_count());
+
+    if (focus_flags & focus_flag_can_interact) {
+        int cmd = key_seq_handler_get_command(g_cfg.keybinds.pane);
+        if (cmd != -1) g_pane_cmd_table[cmd]();
+    }
 
     size_t rects_count = tile_get_count();
     Rectangle rects[rects_count];
@@ -140,7 +159,9 @@ void pane_controler_draw(struct ff_typography typo, int focus_flags) {
 
 void pane_controller_open_in_focused(const char* file_name) {
     assert(g_focused_num < g_file_editors_count);
-    file_editor_open(&g_file_editors[g_focused_num], file_name);
+    struct file_editor* focused = &g_file_editors[g_focused_num];
+    editor_reset_mode(&focused->editor);
+    file_editor_open(focused, file_name);
 }
 
 void pane_controller_terminate(void) {
@@ -159,7 +180,4 @@ void pane_controller_set_focused_buffer(struct buffer* buffer) {
     memset(&focused_file_editor->editor.cursor, 0,
            sizeof(struct text_position));
     file_editor_set_path(focused_file_editor, buffer->buffer_name);
-    // text_view_set_syntax_language(
-    //     &focused_file_editor->editor.text,
-    //     buffer->preview.highlighter.language);
 }

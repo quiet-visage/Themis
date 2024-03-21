@@ -8,3 +8,4 @@ Makefile
 *.make
 external/raylib-5.0/build
 libs/*
+compile_commands.json

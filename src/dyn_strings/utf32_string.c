@@ -1,14 +1,14 @@
 #include "utf32_string.h"
 
 #include <assert.h>
-#include <fieldfusion.h>
 #include <stdlib.h>
 #include <string.h>
 #include <uchar.h>
+#include <fieldfusion.h>
 
 struct utf32_str utf32_str_create(void) {
     struct utf32_str result = {.data = calloc(sizeof(char32_t), 2),
-                               .size = 0,
+                               .length = 0,
                                .capacity = sizeof(char32_t) * 2};
     return result;
 }
@@ -16,7 +16,7 @@ struct utf32_str utf32_str_create(void) {
 struct utf32_str utf32_str_clone(struct utf32_str* str32) {
     struct utf32_str result = {.data = malloc(str32->capacity),
                                .capacity = str32->capacity,
-                               .size = str32->size};
+                               .length = str32->length};
     memcpy(result.data, str32->data, str32->capacity);
     return result;
 }
@@ -35,13 +35,13 @@ void utf32_str_copy_utf8(struct utf32_str* s, const char* buffer,
     int failed = ff_utf8_to_utf32(s->data, buffer, len);
 
     if (failed) {
-        s->size = 0;
+        s->length = 0;
         if (s->capacity > previous_capacity) {
             s->capacity = previous_capacity;
             s->data = realloc(s->data, s->capacity);
         }
     } else {
-        s->size = len;
+        s->length = len;
     }
 }
 
@@ -64,7 +64,7 @@ void utf32_str_read_file(struct utf32_str* s, const char* path) {
 void utf32_str_destroy(struct utf32_str* s) {
     free(s->data);
     s->data = 0;
-    s->size = 0;
+    s->length = 0;
     s->capacity = 0;
 }
 
@@ -79,27 +79,24 @@ void utf32_str_copy(struct utf32_str* s, char32_t* buffer,
     }
 
     memcpy(s->data, buffer, len * sizeof(char32_t));
-    s->size = len;
-    s->data[s->size] = 0;
+    s->length = len;
 }
 
 void utf32_str_delete(struct utf32_str* this, size_t pos,
                       size_t count) {
-    if (!count || !this->size) return;
-    assert(count <= this->size);
-    assert(pos <  this->size);
-    assert(pos + count <= this->size);
+    if (!count || !this->length) return;
+    assert(pos + count <= this->length);
 
     memmove(&this->data[pos], &this->data[pos + count],
-            (1 + this->size - (pos + count)) * sizeof(char32_t));
-    this->size -= count;
-    this->data[this->size] = 0;
+            (this->length - (pos + count)) * sizeof(char32_t));
+    this->length -= count;
 }
 
 void utf32_str_insert_buf(struct utf32_str* this, size_t pos,
                           char32_t* str, size_t len) {
-    assert(pos <= this->size);
-    size_t required_capacity = (this->size + len) * sizeof(char32_t);
+    assert(pos <= this->length);
+    size_t required_capacity =
+        (this->length + len) * sizeof(char32_t);
 
     while (required_capacity > this->capacity) {
         this->capacity *= 2;
@@ -108,12 +105,12 @@ void utf32_str_insert_buf(struct utf32_str* this, size_t pos,
     }
 
     memmove(&this->data[pos + len], &this->data[pos],
-            (this->size - pos) * sizeof(char32_t));
+            (this->length - pos) * sizeof(char32_t));
     memcpy(&this->data[pos], str, len * sizeof(char32_t));
-    this->size += len;
+    this->length += len;
 }
 
-void utf32_str_clear(struct utf32_str* this) { this->size = 0; }
+void utf32_str_clear(struct utf32_str* this) { this->length = 0; }
 
 void utf32_str_insert_utf8_buf(struct utf32_str* s, size_t pos,
                                const char* str, const size_t len) {
@@ -127,4 +124,23 @@ void utf32_str_insert_utf8_buf(struct utf32_str* s, size_t pos,
 void utf32_str_insert_char(struct utf32_str* s, size_t pos,
                            char32_t chr) {
     utf32_str_insert_buf(s, pos, &chr, 1);
+}
+
+char32_t* str32str32(char32_t* pattern, size_t pattern_length,
+                     char32_t* s2, size_t s2_length) {
+    assert(pattern);
+    assert(s2);
+    assert(pattern_length);
+    if (!s2_length) return 0;
+
+    if (pattern_length > s2_length) return 0;
+
+    for (size_t i = 0; i < s2_length; i += 1) {
+        if (pattern[0] != s2[i]) continue;
+        bool found = !memcmp(pattern, &s2[i],
+                             pattern_length * sizeof(char32_t));
+        if (found) return &s2[i];
+    }
+
+    return 0;
 }

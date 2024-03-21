@@ -212,12 +212,12 @@ enum ff_print_options {
 
 struct ff_utf8_str {
     char *data;
-    ulong size;
+    ulong length;
 };
 
 struct ff_utf32_str {
     char32_t *data;
-    ulong size;
+    ulong length;
 };
 
 struct ff_print_params {
@@ -263,11 +263,14 @@ void ff_print_utf32(struct ff_glyphs_vector *vec,
                     const struct ff_utf32_str str,
                     const struct ff_print_params params,
                     const struct ff_position);
-struct ff_dimensions ff_measure(const ff_font_handle_t,
-                                const char32_t *str,
-                                const ulong str_count,
-                                const float size,
-                                const bool with_kerning);
+struct ff_dimensions ff_measure_utf32(const ff_font_handle_t,
+                                      const struct ff_utf32_str str,
+                                      const float size,
+                                      const bool with_kerning);
+struct ff_dimensions ff_measure_utf8(const ff_font_handle_t,
+                                     const struct ff_utf8_str str,
+                                     const float size,
+                                     const bool with_kerning);
 void ff_get_ortho_projection(const struct ff_ortho_params params,
                              float dest[][4]);
 struct ff_glyphs_vector ff_glyphs_vector_create();

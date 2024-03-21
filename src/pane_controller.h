@@ -3,7 +3,7 @@
 #include <raylib.h>
 #include <stddef.h>
 
-#include "buffer_handler.h"
+#include "buffer/buffer_handler.h"
 #include "dyn_strings/utf32_string.h"
 #include "fieldfusion.h"
 

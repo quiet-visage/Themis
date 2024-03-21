@@ -8,7 +8,7 @@
 #include <string.h>
 #include <uchar.h>
 
-#include "../buffer_handler.h"
+#include "../buffer/buffer_handler.h"
 
 #define MAP_SIZE 0x800
 #define FILE_PREVIEW_PATH_CAP 0x100
@@ -41,7 +41,7 @@ void file_preview_create(struct file_preview* o, const char* path) {
                                    file_language);
         buffer_syntax_update(&o->text.buffer->syntax,
                              o->text.buffer->str.data,
-                             o->text.buffer->str.size);
+                             o->text.buffer->str.length);
     }
 }
 

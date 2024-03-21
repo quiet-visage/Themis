@@ -2,18 +2,21 @@
 #include <string.h>
 #include <uchar.h>
 
-#include "buffer_handler.h"
-#include "buffer_picker.h"
+#include "buffer/buffer_handler.h"
+#include "buffer/buffer_picker.h"
+#include "commands.h"
+#include "config.h"
 #include "dyn_strings/utf32_string.h"
 #include "file_picker/file_picker.h"
 #include "file_picker/file_preview.h"
 #include "focus.h"
 #include "highlighter/highlighter.h"
-#include "menu/fuzzy_menu.h"
+#include "key_seq/key_seq.h"
+#include "key_seq/sequence_association.h"
+#include "keyboard.h"
 #include "pane_controller.h"
 #include "resources/resources.h"
-#include "text/cursor.h"
-#include "text/file_editor.h"
+#include "file_editor.h"
 #include "tile_layout.h"
 
 struct focus {
@@ -43,10 +46,23 @@ static void focus_pane_controller(struct focus* focus) {
     focus->buffer_picker_flags = 0;
 }
 
+void (*g_command_table[])(struct focus*) = {
+    [main_cmd_open_file_picker] = focus_file_picker,
+    [main_cmd_open_buffer_picker] = focus_buffer_picker,
+    [main_cmd_close] = focus_pane_controller,
+};
+
+void override_keyboard_callbacks(void) {
+    GLFWwindow* win = GetWindowHandle();
+    glfwSetKeyCallback(win, key_callback);
+    glfwSetCharCallback(win, char_callback);
+}
+
 int main(void) {
     InitWindow(800, 800, "Themis");
     SetTargetFPS(60);
-    SetExitKey(0);
+    SetWindowMinSize(800, 800);
+    override_keyboard_callbacks();
 
     ff_initialize("430");
     resources_init();
@@ -61,6 +77,7 @@ int main(void) {
                     .y = 10,
                     .width = GetScreenWidth() - 200,
                     .height = GetScreenHeight() - 20});
+    config_init_default_keybinds();
 
     struct file_picker file_picker = file_picker_create();
 
@@ -70,9 +87,11 @@ int main(void) {
     struct focus focus = {0};
 
     focus_pane_controller(&focus);
+
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground((Color){0x1e, 0x1e, 0x2e, 0xff});
+        key_seq_handler_begin_frame();
 
         pane_controler_draw(typo, focus.pane_flags);
 
@@ -110,14 +129,13 @@ int main(void) {
                             .height = GetScreenHeight() - 20});
         }
 
-        if (IsKeyPressed(KEY_F1)) {
-            focus_file_picker(&focus);
+        int cmd = key_seq_handler_get_command(g_cfg.keybinds.main);
+        if (cmd != -1) {
+            g_command_table[cmd](&focus);
         }
 
-        if (IsKeyPressed(KEY_F2)) {
-            focus_buffer_picker(&focus);
-        }
-
+        kb_end_frame();
+        key_seq_handler_end_frame();
         EndDrawing();
     }
 
@@ -129,6 +147,7 @@ int main(void) {
     preview_terminate();
     buffer_handler_terminate();
     buffer_picker_terminate();
+    key_seq_handler_terminate();
     CloseWindow();
 
     return 0;

@@ -3,7 +3,8 @@
 #include <fieldfusion.h>
 #include <uchar.h>
 
-#include "../config/config.h"
+#include "../commands.h"
+#include "../config.h"
 #include "file_preview.h"
 #include "raylib.h"
 
@@ -210,9 +211,6 @@ const char* file_picker_perform(struct file_picker* fp,
     fuzzy_menu_draw_options(&fp->menu, typo,
                             dimensions.fz_menu_dimensions);
 
-    if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_COMMA)) {
-        file_picker_up_dir(fp);
-    }
     if (fuzzy_menu_buffer_changed(&fp->menu))
         fuzzy_menu_on_buffer_change(&fp->menu);
 
@@ -220,8 +218,18 @@ const char* file_picker_perform(struct file_picker* fp,
 
     const char32_t* file_picked = NULL;
 
-    if (focus_flags & focus_flag_can_interact)
+    if (focus_flags & focus_flag_can_interact) {
+        int cmd =
+            key_seq_handler_get_command(g_cfg.keybinds.file_picker);
+        if (cmd != -1) {
+            switch (cmd) {
+                case file_picker_cmd_previous_dir:
+                    file_picker_up_dir(fp);
+                    break;
+            }
+        }
         file_picked = fuzzy_menu_handle_interactions(&fp->menu);
+    }
 
     if (file_picked) {
         const char* dir_path = fp->dir;

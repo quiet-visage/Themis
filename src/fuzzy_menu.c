@@ -9,9 +9,11 @@
 #include <stdlib.h>
 #include <uchar.h>
 
-#include "../config/config.h"
-#include "../menu/fuzzy_menu.h"
-#include "../motion/motion.h"
+#include "commands.h"
+#include "config.h"
+#include "fuzzy_menu.h"
+#include "keyboard.h"
+#include "motion.h"
 
 #define MENU_MIN_WIDTH 124.0f
 #define MENU_PADDING 18.0f
@@ -37,24 +39,12 @@ static uint edit_distance(const char32_t* s1, size_t len1,
     return score;
 }
 
-static size_t char32_str_len(const char32_t* str) {
-    const char32_t* ptr = str;
-    size_t result = 0;
-    while (*ptr != 0) {
-        result += 1;
-        ptr += 1;
-    }
-    return result;
-}
-
-static bool is_key_sticky(int key) {
-    return IsKeyPressed(key) || IsKeyPressedRepeat(key);
-}
-
 void fuzzy_menu_create(struct fuzzy_menu* o) {
-    o->editor = line_editor_create();
+    line_editor_create(&o->editor);
     o->editor.text.buffer = malloc(sizeof(struct buffer));
     buffer_create(o->editor.text.buffer, utf32_str_create());
+    buffer_save_undo(o->editor.text.buffer,
+                     (struct text_position){0});
     o->vertical_scroll = 0;
     o->glyphs = ff_glyphs_vector_create();
     o->previous_buffer_size = 0;
@@ -102,10 +92,10 @@ static float largest_string_width(size_t count,
                                   struct ff_typography typo) {
     float result = 0;
     for (size_t i = 0; i < count; i += 1) {
-        float str_width = ff_measure(typo.font, options[i].name,
-                                     char32_str_len(options[i].name),
-                                     typo.size, true)
-                              .width;
+        struct ff_utf32_str str = {.data = options[i].name,
+                                   .length = options[i].name_len};
+        float str_width =
+            ff_measure_utf32(typo.font, str, typo.size, true).width;
         result = fmaxf(result, str_width);
     }
     return result;
@@ -285,7 +275,7 @@ void fuzzy_menu_draw_options(
             &fm->glyphs,
             (struct ff_utf32_str){
                 .data = (char32_t*)fm->options[i].name,
-                .size = fm->options[i].name_len},
+                .length = fm->options[i].name_len},
             (struct ff_print_params){
                 .typography = typo,
                 .print_flags = ff_get_default_print_flags(),
@@ -342,32 +332,26 @@ void fuzzy_menu_sel_prev(struct fuzzy_menu* fm) {
 
 const char32_t* fuzzy_menu_handle_interactions(
     struct fuzzy_menu* fm) {
-    if (is_key_sticky(KEY_DOWN)) {
-        fuzzy_menu_sel_next(fm);
-        return NULL;
-    }
-    if (is_key_sticky(KEY_UP)) fuzzy_menu_sel_prev(fm);
-    if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_ENTER)) {
-        line_editor_clear(&fm->editor);
-        return fm->options[fm->selected].name;
+    int cmd = key_seq_handler_get_command(g_cfg.keybinds.fuzzy_menu);
+
+    switch (cmd) {
+        case menu_cmd_move_up: fuzzy_menu_sel_prev(fm); break;
+        case menu_cmd_move_down:
+            fuzzy_menu_sel_next(fm);
+            break;
+            break;
     }
 
-    if (IsKeyDown(KEY_LEFT_CONTROL)) {
-        if (is_key_sticky(KEY_N)) {
-            fuzzy_menu_sel_next(fm);
-            return NULL;
-        };
-        if (is_key_sticky(KEY_P)) {
-            fuzzy_menu_sel_prev(fm);
-            return NULL;
-        };
+    if (is_key_sticky(KEY_ENTER)) {
+        line_editor_clear(&fm->editor);
+        return fm->options[fm->selected].name;
     }
 
     return NULL;
 }
 
 bool fuzzy_menu_buffer_changed(struct fuzzy_menu* fm) {
-    return fm->editor.text.buffer->str.size !=
+    return fm->editor.text.buffer->str.length !=
            fm->previous_buffer_size;
 }
 
@@ -375,11 +359,11 @@ void fuzzy_menu_on_buffer_change(struct fuzzy_menu* fm) {
     for (size_t i = 0; i < fm->options_count; i += 1) {
         fm->options[i].edit_distance = edit_distance(
             fm->editor.text.buffer->str.data,
-            fm->editor.text.buffer->str.size, fm->options[i].name,
+            fm->editor.text.buffer->str.length, fm->options[i].name,
             fm->options[i].name_len);
     }
     quick_sort_options(fm->options, 0, fm->options_count - 1);
-    fm->previous_buffer_size = fm->editor.text.buffer->str.size;
+    fm->previous_buffer_size = fm->editor.text.buffer->str.length;
     fm->selected = 0;
 }
 

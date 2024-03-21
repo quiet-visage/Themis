@@ -1,11 +1,13 @@
 #include "tile_layout.h"
 
 #include <assert.h>
+#include <float.h>
+#include <raylib.h>
+#include <raymath.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "config/config.h"
-#include "raylib.h"
+#include "config.h"
 
 struct layout_action {
     enum split_kind split_kind;
@@ -87,7 +89,10 @@ size_t tile_get_sorted_n(size_t n) {
         if (!memcmp(&a, &b, sizeof(Rectangle))) return i;
     }
 
-    assert(0 && "What ever happened should not have happened");
+    assert(0 &&
+           "This function should return a valid index, if it doesn't "
+           "then there's a bug outside this function");
+    return (size_t)-1;
 }
 
 size_t tile_get_non_sorted_n(size_t n) {
@@ -99,7 +104,10 @@ size_t tile_get_non_sorted_n(size_t n) {
         if (!memcmp(&a, &b, sizeof(Rectangle))) return i;
     }
 
-    assert(0 && "What ever happened should not have happened");
+    assert(0 &&
+           "This function should return a valid index, if it doesn't "
+           "then there's a bug outside this function");
+    return (size_t)-1;
 }
 
 void tile_perform(void) {
@@ -130,4 +138,185 @@ void tile_remove(size_t n) {
     g_layout_actions_count -= 1;
     g_rects_count -= 1;
     tile_perform();
+}
+
+static size_t tile_get_right_rectangles_count(size_t n) {
+    size_t count = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].x < g_rects[i].x) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+static size_t tile_get_left_rectangles_count(size_t n) {
+    size_t count = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].x > g_rects[i].x) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+static size_t tile_get_up_rectangles_count(size_t n) {
+    size_t count = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].y > g_rects[i].y) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+static size_t tile_get_down_rectangles_count(size_t n) {
+    size_t count = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].y < g_rects[i].y) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+static void tile_get_right_rectangles(size_t n, size_t count,
+                                      size_t rectangles[count]) {
+    size_t idx = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].x < g_rects[i].x) {
+            rectangles[idx] = i;
+            idx += 1;
+        }
+    }
+
+    assert(idx == count);
+}
+
+static void tile_get_left_rectangles(size_t n, size_t count,
+                                     size_t rectangles[count]) {
+    size_t idx = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].x > g_rects[i].x) {
+            rectangles[idx] = i;
+            idx += 1;
+        }
+    }
+
+    assert(idx == count);
+}
+
+static void tile_get_up_rectangles(size_t n, size_t count,
+                                   size_t rectangles[count]) {
+    size_t idx = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].y > g_rects[i].y) {
+            rectangles[idx] = i;
+            idx += 1;
+        }
+    }
+
+    assert(idx == count);
+}
+
+static void tile_get_down_rectangles(size_t n, size_t count,
+                                     size_t rectangles[count]) {
+    size_t idx = 0;
+
+    for (size_t i = 0; i < g_rects_count; i += 1) {
+        if (i == n) continue;
+        if (g_rects[n].y < g_rects[i].y) {
+            rectangles[idx] = i;
+            idx += 1;
+        }
+    }
+
+    assert(idx == count);
+}
+
+size_t tile_get_closest_rectangle(size_t n, size_t count,
+                                  size_t rectangles[count]) {
+    size_t result = -1;
+    float previous_distance = FLT_MAX;
+
+    for (size_t i = 0; i < count; i += 1) {
+        Vector2 v1 = {.x = g_rects[n].x, .y = g_rects[n].y};
+        Vector2 v2 = {.x = g_rects[rectangles[i]].x,
+                      .y = g_rects[rectangles[i]].y};
+
+        float distance = Vector2Distance(v1, v2);
+
+        if (distance < previous_distance) {
+            result = rectangles[i];
+            previous_distance = distance;
+        }
+    }
+
+    return result;
+}
+
+size_t tile_get_right_of(size_t n) {
+    size_t right_rectangles_count =
+        tile_get_right_rectangles_count(n);
+    if (!right_rectangles_count) return -1;
+
+    size_t right_rectangles[right_rectangles_count];
+    tile_get_right_rectangles(n, right_rectangles_count,
+                              right_rectangles);
+
+    return tile_get_closest_rectangle(n, right_rectangles_count,
+                                      right_rectangles);
+}
+
+size_t tile_get_left_of(size_t n) {
+    size_t left_rectangles_count = tile_get_left_rectangles_count(n);
+    if (!left_rectangles_count) return -1;
+
+    size_t left_rectangles[left_rectangles_count];
+    tile_get_left_rectangles(n, left_rectangles_count,
+                             left_rectangles);
+
+    return tile_get_closest_rectangle(n, left_rectangles_count,
+                                      left_rectangles);
+}
+
+size_t tile_get_up_of(size_t n) {
+    size_t up_rectangles_count = tile_get_up_rectangles_count(n);
+    if (!up_rectangles_count) return -1;
+
+    size_t up_rectangles[up_rectangles_count];
+    tile_get_up_rectangles(n, up_rectangles_count, up_rectangles);
+
+    return tile_get_closest_rectangle(n, up_rectangles_count,
+                                      up_rectangles);
+}
+
+size_t tile_get_down_of(size_t n) {
+    size_t down_rectangles_count = tile_get_down_rectangles_count(n);
+    if (!down_rectangles_count) return -1;
+
+    size_t down_rectangles[down_rectangles_count];
+    tile_get_down_rectangles(n, down_rectangles_count,
+                             down_rectangles);
+
+    return tile_get_closest_rectangle(n, down_rectangles_count,
+                                      down_rectangles);
 }

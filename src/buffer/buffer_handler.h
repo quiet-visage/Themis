@@ -2,9 +2,9 @@
 
 #include <stddef.h>
 
+#include "../dyn_strings/utf32_string.h"
+#include "../text_view.h"
 #include "buffer.h"
-#include "dyn_strings/utf32_string.h"
-#include "text/text_view.h"
 
 void buffer_handler_init(void);
 struct buffer* buffer_handler_get(const char* name);

@@ -49,6 +49,7 @@ int main() {
     InitGlCtx();
 
     ff_initialize("440");
+    char *a = calloc(1,1);
 
     struct ff_glyphs_vector glyphs = ff_glyphs_vector_create();
     char32_t dest[16];
@@ -57,7 +58,7 @@ int main() {
     ff_utf32_to_utf8(dest1, dest, 15);
 
     ff_print_utf32(
-        &glyphs, (struct ff_utf32_str){.data = dest, .size = 15},
+        &glyphs, (struct ff_utf32_str){.data = dest, .length = 15},
         (struct ff_print_params){
             .typography =
                 (struct ff_typography){

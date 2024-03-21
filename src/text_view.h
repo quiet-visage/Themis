@@ -4,12 +4,12 @@
 #include <raylib.h>
 #include <sys/types.h>
 
-#include "../buffer.h"
-#include "../dyn_strings/utf32_string.h"
-#include "../focus.h"
-#include "../highlighter/highlighter.h"
-#include "../motion/motion.h"
+#include "buffer/buffer.h"
 #include "cursor.h"
+#include "dyn_strings/utf32_string.h"
+#include "focus.h"
+#include "highlighter/highlighter.h"
+#include "motion.h"
 #include "raylib.h"
 
 struct selection {
@@ -55,42 +55,43 @@ struct text_view {
 
 struct text_search_highlight {
     struct selection* highlights;
-    size_t count;
+    size_t length;
 };
 
 struct text_view text_view_create();
-void text_view_destroy(struct text_view*);
-void text_view_update_glyphs(struct text_view* t,
+void text_view_destroy(struct text_view* m);
+void text_view_update_glyphs(struct text_view* m,
                              struct ff_typography typo,
                              Rectangle bounds);
-bool text_view_is_line_below_view(struct text_view* t,
+bool text_view_is_line_below_view(struct text_view* m,
                                   struct ff_typography typo,
                                   Rectangle bounds, ulong line);
-bool text_view_is_line_above_view(struct text_view* t,
+bool text_view_is_line_above_view(struct text_view* m,
                                   struct ff_typography typo,
                                   ulong line);
-void text_view_select(struct text_view* t, struct selection sel);
-ulong text_view_get_mouse_hover_line(struct text_view* t,
+void text_view_select(struct text_view* m, struct selection sel);
+int text_view_selection_is_invalid(struct text_view* m);
+ulong text_view_get_mouse_hover_line(struct text_view* m,
                                      float font_size, Vector2 mouse,
                                      float y_offset);
-ulong text_view_get_mouse_hover_col(struct text_view* t,
+ulong text_view_get_mouse_hover_col(struct text_view* m,
                                     struct ff_typography typo,
                                     Vector2 mouse, float x_offset,
                                     ulong hovering_line);
-void text_view_handle_mouse(struct text_view* t,
+void text_view_handle_mouse(struct text_view* m,
                             struct ff_typography typo,
                             Rectangle bounds);
-void text_view_scroll_with_cursor(struct text_view* t,
+void text_view_scroll_with_cursor(struct text_view* m,
                                   struct ff_typography typo,
                                   Rectangle bounds,
                                   struct text_position curs_pos);
-void text_view_scroll_with_wheel(struct text_view* t,
+void text_view_scroll_with_wheel(struct text_view* m,
                                  struct ff_typography typo,
                                  Rectangle bounds);
-void text_view_draw(struct text_view* t, struct ff_typography typo,
+void text_view_draw(struct text_view* m, struct ff_typography typo,
                     Rectangle bounds, int focus_flags);
 void text_view_draw_with_cursor(
-    struct text_view* t, struct ff_typography typo, Rectangle bounds,
+    struct text_view* m, struct ff_typography typo, Rectangle bounds,
     struct text_position pos, bool cursor_moved, int focus_flags,
     struct text_search_highlight* search_highlights);
-void text_view_clear_selection(struct text_view* t);
+void text_view_clear_selection(struct text_view* m);

@@ -13,3 +13,7 @@ bool tile_split(enum split_kind split_kind, size_t n);
 size_t tile_get_sorted_n(size_t n);
 size_t tile_get_non_sorted_n(size_t n);
 void tile_remove(size_t n);
+size_t tile_get_right_of(size_t n);
+size_t tile_get_left_of(size_t n);
+size_t tile_get_up_of(size_t n);
+size_t tile_get_down_of(size_t n);

@@ -1133,11 +1133,11 @@ void ff_print_utf8(struct ff_glyphs_vector *vec,
                    const struct ff_utf8_str utf8_string,
                    const struct ff_print_params params,
                    const struct ff_position position) {
-    char32_t converted_utf32[utf8_string.size];
+    char32_t converted_utf32[utf8_string.length];
     ff_utf8_to_utf32(converted_utf32, utf8_string.data,
-                     utf8_string.size);
+                     utf8_string.length);
     struct ff_utf32_str utf32_string = {.data = converted_utf32,
-                                        .size = utf8_string.size};
+                                        .length = utf8_string.length};
     ff_print_utf32(vec, utf32_string, params, position);
 }
 
@@ -1150,7 +1150,7 @@ void ff_print_utf32(struct ff_glyphs_vector *vec,
     struct ff_position pos0 = {position.x,
                                position.y + params.typography.size};
 
-    for (size_t i = 0; i < str.size; i++) {
+    for (size_t i = 0; i < str.length; i++) {
         // const auto &codepoint = (char32_t)buffer.at(i);
         char32_t codepoint = str.data[i];
 
@@ -1199,8 +1199,7 @@ void ff_print_utf32(struct ff_glyphs_vector *vec,
 }
 
 struct ff_dimensions ff_measure(const ff_font_handle_t handle,
-                                const char32_t *str,
-                                const ulong str_count,
+                                const struct ff_utf32_str utf32_str,
                                 const float size,
                                 const bool with_kerning) {
     struct ff_font_texture_pack *fpack =
@@ -1208,8 +1207,8 @@ struct ff_dimensions ff_measure(const ff_font_handle_t handle,
 
     struct ff_dimensions result = {0};
 
-    for (size_t i = 0; i < str_count; i++) {
-        char32_t codepoint = str[i];
+    for (size_t i = 0; i < utf32_str.length; i++) {
+        char32_t codepoint = utf32_str.data[i];
 
         struct ff_map_item *idx =
             ff_map_get(&fpack->font.character_index, codepoint);
@@ -1224,7 +1223,7 @@ struct ff_dimensions ff_measure(const ff_font_handle_t handle,
             with_kerning && FT_HAS_KERNING(fpack->font.face) &&
             (i > 0);
         if (should_get_kerning) {
-            char32_t previous_character = str[i - 1];
+            char32_t previous_character = utf32_str.data[i - 1];
             FT_Get_Kerning(
                 fpack->font.face,
                 FT_Get_Char_Index(fpack->font.face,
@@ -1243,6 +1242,26 @@ struct ff_dimensions ff_measure(const ff_font_handle_t handle,
     }
 
     return result;
+}
+
+struct ff_dimensions ff_measure_utf32(
+    const ff_font_handle_t handle,
+    const struct ff_utf32_str utf32_str, const float size,
+    const bool with_kerning) {
+    return ff_measure(handle, utf32_str, size, with_kerning);
+}
+
+struct ff_dimensions ff_measure_utf8(
+    const ff_font_handle_t handle,
+    const struct ff_utf8_str utf8_string, float size,
+    const bool with_kerning) {
+    char32_t converted_utf32[utf8_string.length];
+    ff_utf8_to_utf32(converted_utf32, utf8_string.data,
+                     utf8_string.length);
+
+    struct ff_utf32_str utf32_string = {.data = converted_utf32,
+                                        .length = utf8_string.length};
+    return ff_measure(handle, utf32_string, size, with_kerning);
 }
 
 void ff_terminate() {
