@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtree_sitter_c.a CMakeFiles/tree_sitter_c.dir/parser.c.o
+/usr/bin/ranlib libtree_sitter_c.a

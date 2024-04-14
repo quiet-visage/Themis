@@ -1,6 +1,7 @@
 #pragma once
 #include <raylib.h>
 
+#include "fieldfusion.h"
 #include "highlighter/highlighter.h"
 #include "key_seq/key_seq.h"
 
@@ -50,8 +51,9 @@ struct config {
     struct color_scheme color_scheme;
     struct keybind_groups keybinds;
     unsigned char scroll_off;
+    struct ff_typography typo;
 };
 
 extern struct config g_cfg;
 
-void config_init_default_keybinds(void);
+void config_init(void);

@@ -2,7 +2,6 @@
 
 #include <math.h>
 #include <raylib.h>
-#include <stdio.h>
 
 #include "motion.h"
 
@@ -23,8 +22,8 @@ struct cursor cursor_new() {
     result.motion.f = 4.5f;
     result.motion.z = 1.0f;
     result.motion.r = -1.0f;
-    result.smear_motion = result.motion;
-    result.smear_motion.f += .05f;
+    // result.smear_motion = result.motion;
+    // result.smear_motion.f += .05f;
     return result;
 }
 
@@ -102,10 +101,10 @@ void cursor_draw(struct cursor* this, float x, float y) {
     cursor_handle_alplha_change(this);
 
     motion_update(&this->motion, (float[2]){x, y}, GetFrameTime());
-    motion_update(&this->smear_motion,
-                  (float[2]){this->motion.position[0],
-                             this->motion.position[1]},
-                  GetFrameTime());
+    // motion_update(&this->smear_motion,
+    //               (float[2]){this->motion.position[0],
+    //                          this->motion.position[1]},
+    //               GetFrameTime());
 
     DrawRectangleRec(
         (Rectangle){.x = this->motion.position[0],

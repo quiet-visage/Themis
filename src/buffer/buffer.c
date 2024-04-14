@@ -1,13 +1,16 @@
 #include "buffer.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
+#include "../dyn_strings/utf32_string.h"
+#include "../highlighter/highlighter.h"
 #include "buffer_history.h"
 #include "buffer_lines.h"
 #include "buffer_syntax.h"
-#include "../dyn_strings/utf32_string.h"
-#include "../highlighter/highlighter.h"
 
 void buffer_create(struct buffer* m, struct utf32_str data) {
     m->str = data;
@@ -57,14 +60,16 @@ struct text_position buffer_undo(struct buffer* m,
         buffer_history_top(&m->undo_history);
 
     if (is_original_buffer) {
-        utf32_str_copy(&m->str, undo_item->str.data, undo_item->str.length);
+        utf32_str_copy(&m->str, undo_item->str.data,
+                       undo_item->str.length);
         buffer_on_modified(m);
         return undo_item->cursor;
     };
 
     buffer_save_redo(m, cursor);
 
-    utf32_str_copy(&m->str, undo_item->str.data, undo_item->str.length);
+    utf32_str_copy(&m->str, undo_item->str.data,
+                   undo_item->str.length);
     buffer_history_pop(&m->undo_history);
 
     buffer_on_modified(m);
@@ -87,7 +92,8 @@ struct text_position buffer_redo(struct buffer* m,
     buffer_save_undo(m, cursor);
     result = redo_item->cursor;
 
-    utf32_str_copy(&m->str, redo_item->str.data, redo_item->str.length);
+    utf32_str_copy(&m->str, redo_item->str.data,
+                   redo_item->str.length);
     buffer_history_pop(&m->redo_history);
 
     buffer_on_modified(m);
@@ -108,7 +114,7 @@ void buffer_clear(struct buffer* m) {
 }
 
 void buffer_insert_char(struct buffer* m, const size_t pos,
-                        const char32_t chr) {
+                        const c32_t chr) {
     utf32_str_insert_char(&m->str, pos, chr);
     buffer_on_modified(m);
     buffer_history_clear(&m->redo_history);
@@ -121,7 +127,7 @@ void buffer_insert_utf8_buf(struct buffer* m, size_t pos, char* str,
     buffer_history_clear(&m->redo_history);
 }
 
-void buffer_insert_buf(struct buffer* m, size_t pos, char32_t* str,
+void buffer_insert_buf(struct buffer* m, size_t pos, c32_t* str,
                        size_t len) {
     utf32_str_insert_buf(&m->str, pos, str, len);
     buffer_on_modified(m);
@@ -134,7 +140,7 @@ void buffer_delete(struct buffer* m, size_t pos, size_t count) {
     buffer_history_clear(&m->redo_history);
 }
 
-void buffer_copy(struct buffer* m, char32_t* buffer, size_t len) {
+void buffer_copy(struct buffer* m, c32_t* buffer, size_t len) {
     utf32_str_copy(&m->str, buffer, len);
     buffer_on_modified(m);
     buffer_history_clear(&m->redo_history);
@@ -152,3 +158,14 @@ void buffer_copy_utf8(struct buffer* m, const char* buffer,
     buffer_on_modified(m);
     buffer_history_clear(&m->redo_history);
 }
+
+void buffer_append_utf8(struct buffer* m, const char* buffer,
+                        size_t len) {
+    utf32_str_append_utf8(&m->str, buffer, len);
+    buffer_on_modified(m);
+    buffer_history_clear(&m->redo_history);
+}
+struct buffer_read_file_threaded_aux_args {
+    struct buffer* m;
+    char* path;
+};

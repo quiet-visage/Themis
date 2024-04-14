@@ -1,0 +1,7 @@
+# CMake generated Testfile for 
+# Source directory: /home/kxx/progs/themis/external/raylib-5.0
+# Build directory: /home/kxx/progs/themis/relbuild/external/raylib-5.0
+# 
+# This file includes the relevant testing commands required for 
+# testing this directory and lists subdirectories to be tested as well.
+subdirs("raylib")

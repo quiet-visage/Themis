@@ -16,11 +16,11 @@ void buffer_syntax_destroy(struct buffer_syntax* m) {
 }
 
 void buffer_syntax_set_language(struct buffer_syntax* m,
-                                       enum language language) {
+                                enum language language) {
     m->highlighter.language = language;
 }
 
-void buffer_syntax_update(struct buffer_syntax* m, char32_t* buffer,
+void buffer_syntax_update(struct buffer_syntax* m, c32_t* buffer,
                           size_t buffer_len) {
     assert(buffer);
     if (m->highlighter.language == language_none_t) return;
@@ -30,7 +30,7 @@ void buffer_syntax_update(struct buffer_syntax* m, char32_t* buffer,
 
     int conv_failed =
         ff_utf32_to_utf8(utf8_buffer, buffer, buffer_len);
-    assert(!conv_failed);
+    assert(conv_failed != (size_t)-1);
 
     hlr_highlighter_update(&m->highlighter, utf8_buffer, buffer_len);
     hlr_tokens_update(&m->highlighter, &m->tokens);

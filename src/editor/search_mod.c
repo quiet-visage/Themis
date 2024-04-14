@@ -1,7 +1,6 @@
 #include "search_mod.h"
 
 #include <string.h>
-#include <uchar.h>
 
 #include "../config.h"
 #include "../resources/resources.h"
@@ -46,7 +45,7 @@ void search_mod_find(struct search_mod* m, struct buffer* buffer) {
     bool buf_empty = !buffer->str.length;
     if (search_buffer_empty || buf_empty) return;
 
-    char32_t* sub_str_ptr = 0;
+    c32_t* sub_str_ptr = 0;
     size_t search_pos = 0;
     while ((sub_str_ptr =
                 str32str32(m->search_editor.text.buffer->str.data,

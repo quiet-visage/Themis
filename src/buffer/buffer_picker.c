@@ -1,7 +1,6 @@
 #include "buffer_picker.h"
 
 #include <fieldfusion.h>
-#include <uchar.h>
 
 #include "../config.h"
 #include "../dyn_strings/utf32_string.h"
@@ -112,10 +111,10 @@ struct buffer* buffer_picker_get_selected_buffer() {
     char selected_name[selected_name_len + 1];
     selected_name[selected_name_len] = 0;
 
-    int conversion_failed = ff_utf32_to_utf8(
+    bool conversion_failed = ff_utf32_to_utf8(
         selected_name,
         g_fuzzy_menu.options[g_fuzzy_menu.selected].name,
-        selected_name_len);
+        selected_name_len) == (size_t)-1;
     assert(!conversion_failed);
     return buffer_handler_get(selected_name);
 }
@@ -173,8 +172,8 @@ struct buffer* buffer_picker_perform(struct ff_typography typo,
 
     DrawRectangleRec(preview_bounds,
                      GetColor(g_cfg.color_scheme.surface1_bg));
-    text_view_draw(&g_text_preview, typo, preview_bounds,
-                   focus_flags);
+    text_view_draw(&g_text_preview, typo, preview_bounds, focus_flags,
+                   0, 0, 0, 0);
 
     if (fuzzy_menu_handle_interactions(&g_fuzzy_menu)) {
         return selected_buffer;

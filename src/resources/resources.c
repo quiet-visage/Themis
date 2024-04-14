@@ -14,8 +14,7 @@ static size_t g_resources_dir_path_len = 0;
 static const char* g_icon_path[icon_count_t] = {
     [icon_folder_t] = "icons/bxs-folder.svg",
     [icon_file_t] = "icons/bxs-file-blank.svg",
-    [icon_search_t] = "icons/bx-search-alt.svg"
-};
+    [icon_search_t] = "icons/bx-search-alt.svg"};
 Texture g_icons[icon_count_t] = {0};
 
 void resources_init(void) {
@@ -44,7 +43,8 @@ void resources_init(void) {
         UnloadImage(icon_image);
 
         icon_path[g_resources_dir_path_len + 1] = 0;
-        memset(&icon_path[g_resources_dir_path_len+1], 0, strlen(g_icon_path[i]));
+        memset(&icon_path[g_resources_dir_path_len + 1], 0,
+               strlen(g_icon_path[i]));
     }
 }
 
@@ -58,7 +58,7 @@ char* resource_file_load(const char* name) {
 
     assert(FileExists(file_path));
 
-    FILE* file = fopen(file_path, "r");
+    FILE* file = fopen(file_path, "rb");
     fseek(file, 0, SEEK_END);
     size_t file_size = ftell(file);
     rewind(file);

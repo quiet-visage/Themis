@@ -6,9 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <uchar.h>
-
-#include "../buffer/buffer_handler.h"
 
 #define MAP_SIZE 0x800
 #define FILE_PREVIEW_PATH_CAP 0x100
@@ -114,7 +111,8 @@ static void map_assign_path_to_key(char* key, const char* path) {
     memcpy(key, path, path_len);
 }
 
-static struct map_entry* map_ll_find(struct map_entry* entry, const char* key) {
+static struct map_entry* map_ll_find(struct map_entry* entry,
+                                     const char* key) {
     assert(entry);
     size_t key_len = strlen(key);
     while (entry) {
@@ -178,6 +176,6 @@ struct file_preview* get_preview(const char* path) {
 
     map_update_entry(&file_preview_cache, path);
     struct file_preview* result = map_get(&file_preview_cache, path);
-    assert(result);
+    if (!result) return 0;
     return result;
 }

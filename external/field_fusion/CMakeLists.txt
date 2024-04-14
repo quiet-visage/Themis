@@ -33,7 +33,7 @@ set(FREETYPE_DIR
 file(GLOB SRCS src/*.c src/*.h)
 
 add_library(field_fusion STATIC ${SRCS})
-target_compile_options(field_fusion PRIVATE "-Wall")
+target_compile_options(field_fusion PRIVATE -Wall -Wextra)
 set_property(TARGET field_fusion PROPERTY C_STANDARD 11)
 
 add_subdirectory("external/freetype-2.13.2")

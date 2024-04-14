@@ -35,7 +35,7 @@ target_compile_options(themis PRIVATE -Wall -Werror=unused-function)
 target_link_options(themis PRIVATE)
 
 add_subdirectory(external/field_fusion)
-target_link_libraries(themis PRIVATE field_fusion)
+target_link_libraries(themis PRIVATE field_fusion -lmagic)
 
 set(PLATFORM Desktop)
 set(GRAPHICS GRAPHICS_API_OPENGL_43)
@@ -53,6 +53,9 @@ add_subdirectory(external/tree_sitter_json)
 
 target_link_libraries(themis PRIVATE tree_sitter tree_sitter_c tree_sitter_cpp
                                      tree_sitter_json)
+
+target_include_directories(themis PRIVATE external/subprocess)
+
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders/ DESTINATION shaders)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/resources/ DESTINATION resources)

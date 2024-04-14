@@ -1,5 +1,14 @@
 #pragma once
 
+#include <stddef.h>
+enum command_group {
+    command_group_editor,
+    command_group_line_editor,
+    command_group_pane,
+    command_group_main,
+    command_group_menu,
+};
+
 enum editor_cmd {
     editor_cmd_none = -1,
     editor_cmd_move_char_left,
@@ -69,6 +78,9 @@ enum main_cmd {
     main_cmd_open_file_picker,
     main_cmd_open_buffer_picker,
     main_cmd_close,
+    main_cmd_compile,
+    main_cmd_compile_close,
+    main_cmd_open_file_link,
     main_cmd_count
 };
 
@@ -87,3 +99,13 @@ enum file_editor_cmd {
     file_editor_cmd_none = -1,
     file_editor_cmd_save,
 };
+
+struct cmd_arg {
+    int cmd;
+    void* arg;
+};
+
+void cmd_arg_set(enum command_group group, int cmd, void* arg,
+                 size_t arg_size);
+struct cmd_arg cmd_arg_get(enum command_group group);
+void cmd_arg_destroy(struct cmd_arg* m);

@@ -6,18 +6,11 @@
 
 #include "buffer/buffer.h"
 #include "cursor.h"
-#include "dyn_strings/utf32_string.h"
-#include "focus.h"
+#include "error_link.h"
 #include "highlighter/highlighter.h"
 #include "motion.h"
 #include "raylib.h"
-
-struct selection {
-    ulong from_line;
-    ulong from_col;
-    ulong to_line;
-    ulong to_col;
-};
+#include "selection.h"
 
 struct lines_vector {
     struct line* data;
@@ -33,6 +26,14 @@ struct scroll {
 struct text_colors {
     int foreground;
     int syntax[token_kind_count_t];
+};
+
+enum decoration_kind { decoration_selection, decoration_squiggly };
+
+struct decoration {
+    enum decoration_kind kind;
+    struct selection* selections;
+    size_t selections_len;
 };
 
 enum text_flags {
@@ -51,11 +52,6 @@ struct text_view {
     struct selection selection;
     int text_flags;
     struct cursor cursor;
-};
-
-struct text_search_highlight {
-    struct selection* highlights;
-    size_t length;
 };
 
 struct text_view text_view_create();
@@ -81,17 +77,21 @@ ulong text_view_get_mouse_hover_col(struct text_view* m,
 void text_view_handle_mouse(struct text_view* m,
                             struct ff_typography typo,
                             Rectangle bounds);
-void text_view_scroll_with_cursor(struct text_view* m,
-                                  struct ff_typography typo,
-                                  Rectangle bounds,
-                                  struct text_position curs_pos);
-void text_view_scroll_with_wheel(struct text_view* m,
-                                 struct ff_typography typo,
-                                 Rectangle bounds);
+void text_view_handle_cursor_scrolling(struct text_view* m,
+                                       struct ff_typography typo,
+                                       Rectangle bounds,
+                                       struct text_position curs_pos);
+void text_view_handle_wheel_scrolling(struct text_view* m,
+                                      struct ff_typography typo,
+                                      Rectangle bounds);
 void text_view_draw(struct text_view* m, struct ff_typography typo,
-                    Rectangle bounds, int focus_flags);
+                    Rectangle bounds, int focus_flags,
+                    struct decoration* decorations,
+                    size_t decorations_len,
+                    struct error_link* error_links,
+                    size_t error_links_len);
 void text_view_draw_with_cursor(
     struct text_view* m, struct ff_typography typo, Rectangle bounds,
     struct text_position pos, bool cursor_moved, int focus_flags,
-    struct text_search_highlight* search_highlights);
+    struct decoration* decorations, size_t decorations_len);
 void text_view_clear_selection(struct text_view* m);

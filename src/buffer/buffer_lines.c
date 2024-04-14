@@ -33,7 +33,7 @@ static void buffer_lines_push(struct buffer_lines* m,
 
 void buffer_lines_clear(struct buffer_lines* m) { m->length = 0; }
 
-void buffer_lines_update(struct buffer_lines* m, const char32_t* str,
+void buffer_lines_update(struct buffer_lines* m, const c32_t* str,
                          const size_t str_len) {
     buffer_lines_clear(m);
 

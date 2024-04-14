@@ -7,12 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <uchar.h>
 
+#include "commands.h"
 #include "config.h"
 #include "cursor.h"
+#include "error_link.h"
+#include "focus.h"
 #include "highlighter/highlighter.h"
 #include "motion.h"
+#include "selection.h"
 
 inline static float font_space(float font_size) {
     return font_size + g_cfg.layout.text_spacing;
@@ -33,8 +36,8 @@ void text_view_destroy(struct text_view* m) {
     ff_glyphs_vector_destroy(&m->glyphs);
 }
 
-static void utf32_substr(char32_t* dest, char32_t* src, ulong len) {
-    memcpy(dest, src, sizeof(char32_t) * len);
+static void utf32_substr(c32_t* dest, c32_t* src, ulong len) {
+    memcpy(dest, src, sizeof(c32_t) * len);
 }
 
 static int get_token_color(enum token_kind kind) {
@@ -84,36 +87,35 @@ void text_view_update_glyphs(struct text_view* m,
         return;
     }
     ff_glyphs_vector_clear(&m->glyphs);
-    struct ff_position line_position = {.x = bounds.x, .y = bounds.y};
+    float line_pos_x = bounds.x;
+    float line_pos_y = bounds.y;
 
     size_t token_index = 0;
     for (ulong i = 0; i < m->buffer->lines.length; i += 1) {
         if (text_view_is_line_above_view(m, typo, i)) {
-            line_position.y += font_space(typo.size);
+            line_pos_y += font_space(typo.size);
             continue;
         }
         if (text_view_is_line_below_view(m, typo, bounds, i)) break;
 
         struct line line = m->buffer->lines.data[i];
         ulong line_length = line_len(&line);
-        char32_t line_str[line_length];
-        memset(line_str, 0, sizeof(char32_t) * line_length);
+        c32_t* line_str = malloc(line_length * sizeof(c32_t));
+        memset(line_str, 0, sizeof(c32_t) * line_length);
         utf32_substr(line_str, &m->buffer->str.data[line.start],
                      line_length);
         ff_print_utf32(
-            &m->glyphs,
-            (struct ff_utf32_str){.data = line_str,
-                                  .length = line_length},
-            (struct ff_print_params){
+            &m->glyphs, line_str, line_length,
+            (struct ff_print){
                 .typography = typo,
-                .print_flags = ff_get_default_print_flags(),
-                .characteristics = ff_get_default_characteristics(),
-                .draw_spaces = false},
-            line_position);
+                .options = ff_get_default_print_flags(),
+                .characteristics = ff_get_default_characteristics()},
+            line_pos_x, line_pos_y);
 
         if (m->buffer->syntax.highlighter.language != language_none_t)
             highlight_glyph_line(m, &token_index, line_length, i);
-        line_position.y += font_space(typo.size);
+        line_pos_y += font_space(typo.size);
+        free(line_str);
     }
 }
 
@@ -134,6 +136,13 @@ bool text_view_is_line_above_view(struct text_view* m,
     float line_pixel_pos = line * font_space(typo.size);
     float top = m->scroll_motion.position[1];
     return line_pixel_pos < top;
+}
+
+bool text_view_is_line_within_view(struct text_view* m,
+                                   struct ff_typography typo,
+                                   Rectangle bounds, ulong line) {
+    return !(text_view_is_line_below_view(m, typo, bounds, line) ||
+             text_view_is_line_above_view(m, typo, line));
 }
 
 static void swap_ul(ulong* a, ulong* b) {
@@ -215,7 +224,7 @@ ulong text_view_get_mouse_hover_col(struct text_view* m,
     ulong matching_line_len = line_len(&matching_line);
     if (matching_line_len == 0) return 0;
 
-    char32_t matching_line_str[matching_line_len + 1];
+    c32_t matching_line_str[matching_line_len + 1];
     matching_line_str[matching_line_len] = 0;
     utf32_substr(matching_line_str,
                  &m->buffer->str.data[matching_line.start],
@@ -224,10 +233,8 @@ ulong text_view_get_mouse_hover_col(struct text_view* m,
     ulong result = 0;
     float character_x = 0;
     for (size_t i = 1; i < matching_line_len; i++) {
-        struct ff_utf32_str str = {.data = matching_line_str,
-                                   .length = i};
-        struct ff_dimensions measurement =
-            ff_measure_utf32(typo.font, str, typo.size, true);
+        struct ff_dimensions measurement = ff_measure_utf32(
+            typo.font, matching_line_str, i, typo.size, true);
         character_x = measurement.width;
         if (character_x > mouse.x - x_offset) break;
         result = i;
@@ -328,14 +335,12 @@ void text_scroll_with_cursor_horizontally(
     size_t line_length = line_len(&line);
     {  // right horizontal scroll
         size_t column = min(curs_pos.column + 5, line_length);
-        char32_t line_str[column + 1];
+        c32_t line_str[column + 1];
         line_str[column] = 0;
         utf32_substr(line_str, &m->buffer->str.data[line.start],
                      column);
-        struct ff_utf32_str str = {.data = line_str,
-                                   .length = column};
-        struct ff_dimensions measurement =
-            ff_measure_utf32(typo.font, str, typo.size, true);
+        struct ff_dimensions measurement = ff_measure_utf32(
+            typo.font, line_str, column, typo.size, true);
         bool cursor_is_out_of_view =
             measurement.width > bounds.width + m->scroll.horizontal;
         if (cursor_is_out_of_view) {
@@ -346,14 +351,12 @@ void text_scroll_with_cursor_horizontally(
     {  // left horizontal scroll
         size_t column = curs_pos.column <= 5 ? curs_pos.column
                                              : curs_pos.column - 5;
-        char32_t line_str[column + 1];
+        c32_t line_str[column + 1];
         line_str[column] = 0;
         utf32_substr(line_str, &m->buffer->str.data[line.start],
                      column);
-        struct ff_utf32_str str = {.data = line_str,
-                                   .length = column};
-        struct ff_dimensions measurement =
-            ff_measure_utf32(typo.font, str, typo.size, true);
+        struct ff_dimensions measurement = ff_measure_utf32(
+            typo.font, line_str, column, typo.size, true);
         bool cursor_is_out_of_view =
             measurement.width < m->scroll.horizontal;
         if (cursor_is_out_of_view)
@@ -361,17 +364,16 @@ void text_scroll_with_cursor_horizontally(
     }
 }
 
-void text_view_scroll_with_cursor(struct text_view* m,
-                                  struct ff_typography typo,
-                                  Rectangle bounds,
-                                  struct text_position curs_pos) {
+void text_view_handle_cursor_scrolling(
+    struct text_view* m, struct ff_typography typo, Rectangle bounds,
+    struct text_position curs_pos) {
     text_scroll_with_cursor_vertically(m, typo, bounds, curs_pos);
     text_scroll_with_cursor_horizontally(m, typo, bounds, curs_pos);
 }
 
-void text_view_scroll_with_wheel(struct text_view* t,
-                                 struct ff_typography typo,
-                                 Rectangle bounds) {
+void text_view_handle_wheel_scrolling(struct text_view* t,
+                                      struct ff_typography typo,
+                                      Rectangle bounds) {
     Vector2 mouse_position = GetMousePosition();
     bool mouse_within_bounds =
         CheckCollisionPointRec(mouse_position, bounds);
@@ -396,137 +398,236 @@ static float text_get_cursor_x(struct text_view* m,
 
     struct line cursor_line = m->buffer->lines.data[pos.row];
 
-    char32_t cursor_line_str[pos.column + 1];
+    c32_t cursor_line_str[pos.column + 1];
     cursor_line_str[pos.column] = 0;
     utf32_substr(cursor_line_str,
                  &m->buffer->str.data[cursor_line.start], pos.column);
 
-    struct ff_utf32_str str = {.data = cursor_line_str,
-                               .length = pos.column};
-    float result =
-        ff_measure_utf32(typo.font, str, typo.size, true).width +
-        bounds.x;
+    float result = ff_measure_utf32(typo.font, cursor_line_str,
+                                    pos.column, typo.size, true)
+                       .width +
+                   bounds.x;
 
     return result;
 }
 
-static void text_draw_single_line_selection(
-    struct text_view* m, struct ff_typography typo, Rectangle bounds,
-    ulong row, ulong col, ulong length, Color bg_color) {
-    if (length == 0) return;
-    if (text_view_is_line_above_view(m, typo, row)) return;
-    if (text_view_is_line_below_view(m, typo, bounds, row)) return;
+static void text_draw_squiggly_wave(Vector2 start, float width) {
+    static const float amplitude = 1.5f;
+    static const float wave_length = 10.0f;
+    static const float half_wave_length = wave_length / 2;
+    size_t point_count = (size_t)(width / half_wave_length);
 
-    float y = row * font_space(typo.size) + bounds.y +
-              -m->scroll_motion.position[1];
-    float x = bounds.x;
-
-    struct line line = m->buffer->lines.data[row];
-    assert(line_len(&line) >= col + length);
-
-    if (col != 0) {
-        char32_t line_str[col + 1];
-        line_str[col] = 0;
-        utf32_substr(line_str, &m->buffer->str.data[line.start], col);
-
-        struct ff_utf32_str str = {.data = line_str, .length = col};
-        x += ff_measure_utf32(typo.font, str, typo.size, true).width;
+    Vector2 points[point_count];
+    points[0] = start;
+    points[1].x = start.x + half_wave_length;
+    points[1].y = start.y + amplitude;
+    float previous_point_x = points[1].x;
+    bool below_equilibrium = false;
+    for (size_t i = 2; i < point_count; i += 1) {
+        points[i].x = previous_point_x + wave_length;
+        points[i].y = start.y;
+        if (below_equilibrium)
+            points[i].y += amplitude;
+        else
+            points[i].y -= amplitude;
+        below_equilibrium = !below_equilibrium;
+        previous_point_x = points[i].x;
     }
 
-    ulong start_index = line.start + col;
-    char32_t selected_str[length + 1];
-    selected_str[length] = 0;
-    utf32_substr(selected_str, &m->buffer->str.data[start_index],
-                 length);
-
-    struct ff_utf32_str str = {.data = selected_str,
-                               .length = length};
-    float width =
-        ff_measure_utf32(typo.font, str, typo.size, true).width;
-
-    Rectangle selected_area = {
-        .x = x,
-        .y = y,
-        .width = width - m->scroll_motion.position[0],
-        .height = font_space(typo.size)};
-    DrawRectangleRec(selected_area, bg_color);
+    glEnable(GL_STENCIL_TEST);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDepthMask(GL_FALSE);
+    glStencilFunc(GL_NEVER, 1, 0xFF);
+    glStencilOp(GL_REPLACE, GL_KEEP, GL_KEEP);
+    glStencilMask(0xFF);
+    glClear(GL_STENCIL_BUFFER_BIT);
+    DrawRectangle(start.x, start.y - amplitude * 4, width,
+                  amplitude * 8, WHITE);
+    rlDrawRenderBatchActive();
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
+    glStencilMask(0x00);
+    glStencilFunc(GL_EQUAL, 0, 0xFF);
+    glStencilFunc(GL_EQUAL, 1, 0xFF);
+    DrawSplineCatmullRom(points, point_count, 1.0f, PINK);
+    rlDrawRenderBatchActive();
+    glDisable(GL_STENCIL_TEST);
 }
 
-static void text_draw_selection(struct text_view* m,
-                                struct ff_typography typo,
-                                struct selection selection,
-                                Rectangle bounds, Color bg_color) {
+static Rectangle get_text_dimensions(struct text_view* m,
+                                     struct ff_typography typo,
+                                     Rectangle bounds, ulong row,
+                                     ulong col, ulong length) {
+    // NOTE: this does not clip the dimensions within the bounds
+    Rectangle result = {.x = bounds.x - m->scroll_motion.position[0],
+                        .y = bounds.y + row * font_space(typo.size) -
+                             m->scroll_motion.position[1],
+                        .width = 0,
+                        .height = font_space(typo.size)};
+
+    struct line line = m->buffer->lines.data[row];
+    assert(line_len(&line) + col + length);
+
+    if (col != 0) {
+        c32_t offset_str[col];
+        utf32_substr(offset_str, &m->buffer->str.data[line.start],
+                     col);
+        result.x += ff_measure_utf32(typo.font, offset_str, col,
+                                     typo.size, true)
+                        .width;
+    }
+
+    ulong start_idx = line.start + col;
+    c32_t selected_str[length + 1];
+    selected_str[length] = 0;
+    utf32_substr(selected_str, &m->buffer->str.data[start_idx],
+                 length);
+    result.width = ff_measure_utf32(typo.font, selected_str, length,
+                                    typo.size, true)
+                       .width;
+
+    return result;
+}
+
+static void text_draw_line_decoration(struct text_view* m,
+                                      struct ff_typography typo,
+                                      Rectangle ln_rec,
+                                      enum decoration_kind kind) {
+    switch (kind) {
+        case decoration_squiggly: {
+            Vector2 start = {.x = ln_rec.x,
+                             .y = ln_rec.y + font_space(typo.size)};
+            text_draw_squiggly_wave(start, ln_rec.width);
+        } break;
+        case decoration_selection: {
+            DrawRectangleRec(
+                ln_rec, GetColor(g_cfg.color_scheme.selected_bg));
+        }
+    }
+}
+
+static size_t get_selection_dimensions_out_len(
+    struct selection selection) {
+    assert(selection.from_line <= selection.to_line);
+    return selection.to_line - selection.from_line + 1;
+}
+
+static bool is_hovering_bulk(Rectangle* recs, size_t recs_len) {
+    Vector2 mouse_pos = GetMousePosition();
+    for (size_t i = 0; i < recs_len; i += 1)
+        if (CheckCollisionPointRec(mouse_pos, recs[i])) return 1;
+    return 0;
+}
+
+static void get_selection_dimensions(struct text_view* m,
+                                     struct ff_typography typo,
+                                     struct selection selection,
+                                     Rectangle bounds,
+                                     Rectangle* out) {
+    Rectangle* out_ptr = out;
     ulong start_line = selection.from_line;
     ulong end_line = selection.to_line;
-
-    ulong first_visible_line = 0ul;
-    while (text_view_is_line_above_view(m, typo, first_visible_line))
-        first_visible_line += 1;
-
-    ulong last_visible_line = first_visible_line;
-    while (!text_view_is_line_below_view(m, typo, bounds,
-                                         last_visible_line))
-        last_visible_line += 1;
-
-    if (text_view_is_line_below_view(m, typo, bounds,
-                                     first_visible_line))
-        last_visible_line -= 1;
-
-    if (text_view_is_line_above_view(m, typo, end_line)) return;
-    if (text_view_is_line_below_view(m, typo, bounds, start_line))
-        return;
-
-    bool selection_is_out_of_view =
-        (start_line > last_visible_line) ||
-        (end_line < first_visible_line);
-    if (selection_is_out_of_view) return;
-
-    ulong selected_lines_count = end_line - start_line + 1;
-    bool is_single_line = selected_lines_count == 1;
+    assert(end_line >= start_line);
 
     ulong start_col = selection.from_col;
     ulong end_col = selection.to_col;
 
-    if (is_single_line) {
-        assert(end_col >= start_col);
-        return text_draw_single_line_selection(
-            m, typo, bounds, start_line, start_col,
-            end_col - start_col, bg_color);
+    size_t out_len = get_selection_dimensions_out_len(selection);
+    bool single_line = out_len == 1;
+    if (single_line &&
+        text_view_is_line_within_view(m, typo, bounds, start_line)) {
+        *out_ptr =
+            get_text_dimensions(m, typo, bounds, start_line,
+                                start_col, end_col - start_col);
+        return;
     }
 
-    for (size_t i = start_line; i <= end_line; i++) {
-        if (text_view_is_line_above_view(m, typo, i)) continue;
-        if (text_view_is_line_below_view(m, typo, bounds, i)) return;
-
+    for (size_t i = start_line; i <= end_line; i += 1) {
         struct line line = m->buffer->lines.data[i];
         ulong line_length = line_len(&line);
 
-        bool is_first = i == start_line;
-        if (is_first) {
-            text_draw_single_line_selection(
-                m, typo, bounds, i, start_col,
-                line_length - start_col, bg_color);
-            continue;
+        if (i == start_line) {
+            *out_ptr =
+                get_text_dimensions(m, typo, bounds, i, start_col,
+                                    line_length - start_col);
+        } else if (i == end_line) {
+            *out_ptr =
+                get_text_dimensions(m, typo, bounds, i, 0, end_col);
+        } else {
+            *out_ptr = get_text_dimensions(m, typo, bounds, i, 0,
+                                           line_length);
         }
 
-        bool is_last = i == end_line;
-        if (is_last) {
-            text_draw_single_line_selection(m, typo, bounds, i, 0,
-                                            end_col, bg_color);
-            continue;
-        }
+        out_ptr += 1;
+    }
+}
 
-        text_draw_single_line_selection(m, typo, bounds, i, 0,
-                                        line_length, bg_color);
+static void text_draw_selection_decoration(
+    struct text_view* m, struct ff_typography typo,
+    Rectangle* selection_recs, size_t selection_recs_len,
+    enum decoration_kind kind) {
+    for (size_t i = 0; i < selection_recs_len; i += 1) {
+        text_draw_line_decoration(m, typo, selection_recs[i], kind);
+    }
+}
+
+static void text_mark_decorations(struct text_view* m,
+                                  struct decoration* decorations,
+                                  size_t decoration_len,
+                                  struct ff_typography typo,
+                                  Rectangle bounds) {
+    for (size_t i = 0; i < decoration_len; i += 1) {
+        for (size_t ii = 0; ii < decorations[i].selections_len;
+             ii += 1) {
+            struct selection sel = decorations[i].selections[ii];
+            size_t sel_recs_len = get_selection_dimensions_out_len(
+                decorations[i].selections[ii]);
+            Rectangle sel_recs[sel_recs_len];
+            get_selection_dimensions(m, typo, sel, bounds, sel_recs);
+            text_draw_selection_decoration(
+                m, typo, sel_recs, sel_recs_len, decorations[i].kind);
+        }
+    }
+}
+
+static void handle_error_links(struct text_view* m,
+                               struct ff_typography typo,
+                               Rectangle bounds, int focus_flags,
+                               struct error_link* error_links,
+                               size_t error_links_len) {
+    for (size_t i = 0; i < error_links_len; i += 1) {
+        struct error_link* err_link = &error_links[i];
+
+        size_t sel_recs_len = get_selection_dimensions_out_len(
+            err_link->link_selection);
+        Rectangle sel_recs[sel_recs_len];
+        get_selection_dimensions(m, typo, err_link->link_selection,
+                                 bounds, sel_recs);
+
+        text_draw_selection_decoration(
+            m, typo, sel_recs, sel_recs_len, decoration_squiggly);
+
+        if (!(focus_flags & focus_flag_can_interact)) return;
+        if (!IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return;
+        bool hovering = is_hovering_bulk(sel_recs, sel_recs_len);
+        if (hovering) {
+            cmd_arg_set(command_group_main, main_cmd_open_file_link,
+                        &err_link->file_link,
+                        sizeof(err_link->file_link));
+        };
     }
 }
 
 void text_view_draw(struct text_view* m, struct ff_typography typo,
-                    Rectangle bounds, int focus_flags) {
+                    Rectangle bounds, int focus_flags,
+                    struct decoration* decorations,
+                    size_t decorations_len,
+                    struct error_link* error_links,
+                    size_t error_links_len) {
     assert(m->buffer && "There should be a buffer to be drawn");
     if ((focus_flags & focus_flag_can_scroll) &&
         CheckCollisionPointRec(GetMousePosition(), bounds))
-        text_view_scroll_with_wheel(m, typo, bounds);
+        text_view_handle_wheel_scrolling(m, typo, bounds);
 
     motion_update(
         &m->scroll_motion,
@@ -535,51 +636,50 @@ void text_view_draw(struct text_view* m, struct ff_typography typo,
 
     BeginScissorMode(bounds.x, bounds.y, bounds.width, bounds.height);
     if (m->text_flags & text_flag_has_selection) {
-        text_draw_selection(m, typo, m->selection, bounds,
-                            GetColor(g_cfg.color_scheme.text_sel_bg));
+        size_t sel_recs_len =
+            get_selection_dimensions_out_len(m->selection);
+        Rectangle sel_recs[sel_recs_len];
+        get_selection_dimensions(m, typo, m->selection, bounds,
+                                 sel_recs);
+        text_draw_selection_decoration(
+            m, typo, sel_recs, sel_recs_len, decoration_selection);
         rlDrawRenderBatchActive();
+    }
+    if (decorations && decorations_len) {
+        text_mark_decorations(m, decorations, decorations_len, typo,
+                              bounds);
+    }
+    if (error_links && error_links_len) {
+        for (size_t i = 0; i < error_links_len; i += 1) {
+            handle_error_links(m, typo, bounds, focus_flags,
+                               error_links, error_links_len);
+        }
     }
 
     text_view_update_glyphs(m, typo, bounds);
     float projection[4][4];
-    struct ff_ortho_params projection_params = {
-        .scr_left = m->scroll_motion.position[0],
-        .scr_right = GetScreenWidth() + m->scroll_motion.position[0],
-        .scr_bottom =
-            GetScreenHeight() + m->scroll_motion.position[1],
-        .scr_top = m->scroll_motion.position[1],
-        .near = -1.0f,
-        .far = 1.0f};
-    ff_get_ortho_projection(projection_params, projection);
+    ff_get_ortho_projection(
+        m->scroll_motion.position[0],
+        GetScreenWidth() + m->scroll_motion.position[0],
+        GetScreenHeight() + m->scroll_motion.position[1],
+        m->scroll_motion.position[1], -1.0f, 1.0f, projection);
     ff_draw(typo.font, m->glyphs.data, m->glyphs.size,
             (float*)projection);
     EndScissorMode();
 }
 
-static void text_search_highlight_matches(
-    struct text_view* m,
-    struct text_search_highlight* search_highlights,
-    struct ff_typography typo, Rectangle bounds) {
-    for (size_t i = 0; i < search_highlights->length; i += 1) {
-        text_draw_selection(m, typo, search_highlights->highlights[i],
-                            bounds,
-                            GetColor(g_cfg.color_scheme.selected_bg));
-    }
-}
-
 void text_view_draw_with_cursor(
     struct text_view* m, struct ff_typography typo, Rectangle bounds,
     struct text_position pos, bool cursor_moved, int focus_flags,
-    struct text_search_highlight* search_highlights) {
+    struct decoration* decorations, size_t decorations_len) {
     assert(m->buffer && "There should be a buffer to be drawn");
     assert(pos.row < m->buffer->lines.length);
 
     if (cursor_moved)
-        text_view_scroll_with_cursor(m, typo, bounds, pos);
+        text_view_handle_cursor_scrolling(m, typo, bounds, pos);
     else if ((focus_flags & focus_flag_can_scroll) &&
-             CheckCollisionPointRec(GetMousePosition(), bounds)) {
-        text_view_scroll_with_wheel(m, typo, bounds);
-    }
+             CheckCollisionPointRec(GetMousePosition(), bounds))
+        text_view_handle_wheel_scrolling(m, typo, bounds);
 
     motion_update(
         &m->scroll_motion,
@@ -589,28 +689,29 @@ void text_view_draw_with_cursor(
     BeginScissorMode(bounds.x, bounds.y, bounds.width, bounds.height);
 
     if (m->text_flags & text_flag_has_selection) {
-        text_draw_selection(m, typo, m->selection, bounds,
-                            GetColor(g_cfg.color_scheme.text_sel_bg));
-        rlDrawRenderBatchActive();
+        size_t sel_recs_len =
+            get_selection_dimensions_out_len(m->selection);
+        Rectangle sel_recs[sel_recs_len];
+        get_selection_dimensions(m, typo, m->selection, bounds,
+                                 sel_recs);
+        text_draw_selection_decoration(
+            m, typo, sel_recs, sel_recs_len, decoration_selection);
+    }
+    if (decorations && decorations_len) {
+        text_mark_decorations(m, decorations, decorations_len, typo,
+                              bounds);
     }
 
-    if (search_highlights && search_highlights->length) {
-        text_search_highlight_matches(m, search_highlights, typo,
-                                      bounds);
-        rlDrawRenderBatchActive();
-    }
+    rlDrawRenderBatchActive();
 
     text_view_handle_mouse(m, typo, bounds);
 
-    if (focus_flags & focus_flag_can_interact) {
+    if (focus_flags & focus_flag_can_interact)
         m->cursor.flags |= cursor_flag_focused_t;
-    } else {
+    else
         m->cursor.flags &= ~cursor_flag_focused_t;
-    }
 
-    if (cursor_moved) {
-        m->cursor.flags |= cursor_flag_recently_moved_t;
-    }
+    if (cursor_moved) m->cursor.flags |= cursor_flag_recently_moved_t;
 
     float cursor_x = text_get_cursor_x(m, typo, bounds, pos) -
                      m->scroll_motion.position[0];
@@ -620,15 +721,11 @@ void text_view_draw_with_cursor(
 
     text_view_update_glyphs(m, typo, bounds);
     float projection[4][4];
-    struct ff_ortho_params projection_params = {
-        .scr_left = m->scroll_motion.position[0],
-        .scr_right = GetScreenWidth() + m->scroll_motion.position[0],
-        .scr_bottom =
-            GetScreenHeight() + m->scroll_motion.position[1],
-        .scr_top = m->scroll_motion.position[1],
-        .near = -1.0f,
-        .far = 1.0f};
-    ff_get_ortho_projection(projection_params, projection);
+    ff_get_ortho_projection(
+        m->scroll_motion.position[0],
+        GetScreenWidth() + m->scroll_motion.position[0],
+        GetScreenHeight() + m->scroll_motion.position[1],
+        m->scroll_motion.position[1], -1.0f, 1.0f, projection);
     ff_draw(typo.font, m->glyphs.data, m->glyphs.size,
             (float*)projection);
     EndScissorMode();

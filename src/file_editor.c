@@ -3,12 +3,13 @@
 #include <fieldfusion.h>
 #include <raylib.h>
 #include <stdio.h>
-#include <uchar.h>
 
 #include "buffer/buffer_handler.h"
 #include "commands.h"
 #include "config.h"
+#include "editor/editor.h"
 #include "file_editor.h"
+#include "focus.h"
 #include "highlighter/highlighter.h"
 #include "rlgl.h"
 
@@ -76,30 +77,27 @@ static void file_editor_update_status_line_glyphs(
     Rectangle status_line_bounds =
         file_editor_get_status_line_bounds(m, typo, bounds);
 
-    struct ff_utf8_str utf8_str = {
-        .data = m->status_line_str.data,
-        .length = m->status_line_str.length,
-    };
-
     struct ff_dimensions text_dimensions =
-        ff_measure_utf8(typo.font, utf8_str, typo.size, 0);
+        ff_measure_utf8(typo.font, m->status_line_str.data,
+                        m->status_line_str.length, typo.size, 0);
 
-    struct ff_position text_position = {
-        .x = status_line_bounds.x + status_line_bounds.width * .5f -
-             text_dimensions.width * .5f,
-        .y = status_line_bounds.y + status_line_bounds.height * .5f -
-             text_dimensions.height * .5};
+    float text_x = status_line_bounds.x +
+                   status_line_bounds.width * .5f -
+                   text_dimensions.width * .5f;
+    float text_y = status_line_bounds.y +
+                   status_line_bounds.height * .5f -
+                   text_dimensions.height * .5;
 
     ff_glyphs_vector_clear(&m->status_line_glyphs);
 
-    struct ff_print_params print_params = {
+    struct ff_print print = {
         .typography = typo,
-        .print_flags = ff_get_default_print_flags(),
+        .options = ff_get_default_print_flags(),
         .characteristics = ff_get_default_characteristics(),
-        .draw_spaces = false};
+    };
 
-    ff_print_utf8(&m->status_line_glyphs, utf8_str, print_params,
-                  text_position);
+    ff_print_utf8(&m->status_line_glyphs, m->status_line_str.data,
+                  m->status_line_str.length, print, text_x, text_y);
 }
 
 void file_editor_create(struct file_editor* m) {
@@ -116,6 +114,7 @@ void file_editor_open(struct file_editor* m, const char* file_path) {
 
     struct buffer* stored_buffer = buffer_handler_get(file_path);
     utf8_str_copy(&m->file_path, file_path, strlen(file_path));
+    editor_reset_mode(&m->editor);
     if (stored_buffer) {
         m->editor.text.buffer = stored_buffer;
     } else {
@@ -165,21 +164,15 @@ void file_editor_draw_status_line(struct file_editor* m,
     file_editor_update_status_line_glyphs(m, bounds, typo,
                                           focus_flags);
 
-    float projection[4][4];
-    struct ff_ortho_params projection_params = {
-        .scr_left = 0,
-        .scr_right = GetScreenWidth(),
-        .scr_bottom = GetScreenHeight(),
-        .scr_top = 0,
-        .near = -1.0f,
-        .far = 1.0f};
     Rectangle bar_rec =
         file_editor_get_status_line_bounds(m, typo, bounds);
     DrawRectangleRec(bar_rec,
                      GetColor(g_cfg.color_scheme.surface0_bg));
     rlDrawRenderBatchActive();
 
-    ff_get_ortho_projection(projection_params, projection);
+    float projection[4][4];
+    ff_get_ortho_projection(0, GetScreenWidth(), GetScreenHeight(), 0,
+                            -1.0f, 1.0f, projection);
     ff_draw(typo.font, m->status_line_glyphs.data,
             m->status_line_glyphs.size, (float*)projection);
 }

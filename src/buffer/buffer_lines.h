@@ -1,6 +1,6 @@
 #pragma once
+#include <fieldfusion.h>
 #include <stddef.h>
-#include <uchar.h>
 
 struct line {
     size_t start;
@@ -19,5 +19,5 @@ size_t buffer_lines_get_line_num_from_idx(struct buffer_lines* m,
                                           size_t idx);
 void buffer_lines_destroy(struct buffer_lines* m);
 void buffer_lines_clear(struct buffer_lines* m);
-void buffer_lines_update(struct buffer_lines* m, const char32_t* str,
+void buffer_lines_update(struct buffer_lines* m, const c32_t* str,
                          const size_t str_len);

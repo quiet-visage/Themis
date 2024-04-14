@@ -1,7 +1,6 @@
 #include "pane_controller.h"
 
 #include <fieldfusion.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "buffer/buffer_handler.h"
@@ -22,6 +21,10 @@
 struct file_editor g_file_editors[FILE_EDITOR_CAP] = {0};
 size_t g_file_editors_count = 0;
 static size_t g_focused_num = 0;
+
+struct file_editor* pane_controller_get_focused(void) {
+    return &g_file_editors[g_focused_num];
+}
 
 void pane_controller_update_bounds(Rectangle bounds) {
     tile_set_root(bounds);
@@ -174,7 +177,7 @@ void pane_controller_terminate(void) {
 void pane_controller_set_focused_buffer(struct buffer* buffer) {
     assert(buffer);
     struct file_editor* focused_file_editor =
-        &g_file_editors[g_focused_num];
+        pane_controller_get_focused();
     focused_file_editor->editor.text.buffer = buffer;
 
     memset(&focused_file_editor->editor.cursor, 0,

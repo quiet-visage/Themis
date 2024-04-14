@@ -13,7 +13,7 @@ enum cursor_flags {
 
 struct cursor {
     struct motion motion;
-    struct motion smear_motion;
+    // struct motion smear_motion;
     float blink_duration_ms;
     float blink_delay_ms;
     unsigned char max_alpha;

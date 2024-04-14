@@ -1,9 +1,9 @@
 #include "config.h"
 
 #include "commands.h"
+#include "fieldfusion.h"
 #include "raylib.h"
 
-// static const int rosewater = 0xf5e0dcff;
 static const int flamingo = 0xf2cdcdff;
 static const int pink = 0xf5c2e7ff;
 static const int mauve = 0xcba6f7ff;
@@ -14,9 +14,7 @@ static const int yellow = 0xf9e2afff;
 static const int green = 0xa6e3a1ff;
 static const int teal = 0x94e2d5ff;
 static const int sky = 0x89dcebff;
-// static const int sapphire = 0x74c7ecff;
 static const int blue = 0x89b4faff;
-// static const int lavender = 0xb4befeff;
 static const int text = 0xcdd6f4ff;
 static const int overlay2 = 0x9399b2ff;
 static const int overlay0 = 0x6c7086ff;
@@ -182,7 +180,8 @@ static void init_main_keybinds() {
     REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_open_file_picker,   KEY_SEQ(mod_key_ctrl, KEY_X), KEY_SEQ(0, KEY_F));
     REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_open_buffer_picker, KEY_SEQ(mod_key_ctrl, KEY_X), KEY_SEQ(0, KEY_B));
     REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_close,              KEY_SEQ(0, KEY_ESCAPE));
-    REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_close,              KEY_SEQ(mod_key_ctrl, KEY_G));
+    REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_compile,            KEY_SEQ(mod_key_ctrl, KEY_C), KEY_SEQ(0, KEY_C));
+    REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_compile_close,      KEY_SEQ(mod_key_ctrl, KEY_C), KEY_SEQ(0, KEY_X));
 }
 
 static void init_menu_keybinds() {
@@ -198,7 +197,7 @@ static void init_file_editor_keybinds() {
     REGISTER_KEYBIND(g_cfg.keybinds.file_editor, file_editor_cmd_save,KEY_SEQ(mod_key_ctrl , KEY_X), KEY_SEQ(0, KEY_S));
 }
 // clang-format on
-void config_init_default_keybinds(void) {
+void config_init(void) {
     g_cfg.keybinds.editor.mode_normal =
         key_seq_handler_create_group();
     g_cfg.keybinds.editor.mode_search =
@@ -222,4 +221,7 @@ void config_init_default_keybinds(void) {
     init_main_keybinds();
     init_file_picker_keybinds();
     init_file_editor_keybinds();
+
+    g_cfg.typo = (struct ff_typography){
+        .font = 0, .size = 14.f, .color = 0xffffffff};
 }

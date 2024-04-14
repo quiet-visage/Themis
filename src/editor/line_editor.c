@@ -3,14 +3,13 @@
 #include <fieldfusion.h>
 #include <raylib.h>
 #include <string.h>
-#include <uchar.h>
 
 #include "../buffer/buffer.h"
 #include "../commands.h"
 #include "../config.h"
+#include "../focus.h"
 #include "../key_seq/key_seq.h"
 #include "../keyboard.h"
-#include "cursor_history.h"
 
 struct line_editor_action_param {
     struct line_editor* m;
@@ -232,7 +231,7 @@ static void line_editor_paste(
     }
     clipboard_utf8_len = chars_until_new_line;
 
-    char32_t clipboard_utf32[clipboard_utf8_len + 1];
+    c32_t clipboard_utf32[clipboard_utf8_len + 1];
     clipboard_utf32[clipboard_utf8_len] = 0;
 
     int err = ff_utf8_to_utf32(clipboard_utf32, clipboard_utf8,
@@ -257,7 +256,7 @@ static void line_editor_cut(struct line_editor_action_param* param) {
 }
 
 static void line_editor_insert_char(
-    struct line_editor_action_param* param, char32_t chr) {
+    struct line_editor_action_param* param, c32_t chr) {
     assert(param->m->text.buffer);
     if (chr == U' ' || chr == U'_' || chr == U'\n' ||
         param->m->line_editor_flags &
@@ -276,8 +275,8 @@ static void line_editor_move_word_right(
     struct line_editor_action_param* param) {
     size_t idx = param->m->cursor.column;
 
-    char32_t current_char = param->m->text.buffer->str.data[idx];
-    for (char32_t current_char = param->m->text.buffer->str.data[idx];
+    c32_t current_char = param->m->text.buffer->str.data[idx];
+    for (c32_t current_char = param->m->text.buffer->str.data[idx];
          idx && current_char == U' '; idx += 1,
                   current_char = param->m->text.buffer->str.data[idx])
         ;
@@ -300,8 +299,8 @@ static void line_editor_move_word_left(
 
     if (idx) idx -= 1;
 
-    char32_t current_char = param->m->text.buffer->str.data[idx];
-    for (char32_t current_char = param->m->text.buffer->str.data[idx];
+    c32_t current_char = param->m->text.buffer->str.data[idx];
+    for (c32_t current_char = param->m->text.buffer->str.data[idx];
          idx && current_char == U' '; idx -= 1,
                   current_char = param->m->text.buffer->str.data[idx])
         ;
@@ -413,7 +412,7 @@ void line_editor_draw(struct line_editor* m,
     text_view_draw_with_cursor(
         &m->text, typo, bounds, m->cursor,
         m->line_editor_flags & line_editor_flag_cursor_moved,
-        focus_flags, 0);
+        focus_flags, 0, 0);
 
     m->line_editor_flags &= ~line_editor_flag_cursor_moved;
 }

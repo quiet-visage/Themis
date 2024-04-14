@@ -1,15 +1,17 @@
 #include "utf32_string.h"
 
 #include <assert.h>
+#include <fieldfusion.h>
+#include <magic.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <uchar.h>
-#include <fieldfusion.h>
+#include <threads.h>
 
 struct utf32_str utf32_str_create(void) {
-    struct utf32_str result = {.data = calloc(sizeof(char32_t), 2),
+    struct utf32_str result = {.data = calloc(sizeof(c32_t), 2),
                                .length = 0,
-                               .capacity = sizeof(char32_t) * 2};
+                               .capacity = sizeof(c32_t) * 2};
     return result;
 }
 
@@ -23,7 +25,7 @@ struct utf32_str utf32_str_clone(struct utf32_str* str32) {
 
 void utf32_str_copy_utf8(struct utf32_str* s, const char* buffer,
                          size_t len) {
-    size_t required_capacity = sizeof(char32_t) * len;
+    size_t required_capacity = sizeof(c32_t) * len;
     size_t previous_capacity = s->capacity;
 
     while (required_capacity > s->capacity) {
@@ -32,21 +34,61 @@ void utf32_str_copy_utf8(struct utf32_str* s, const char* buffer,
         assert(s->data);
     }
 
-    int failed = ff_utf8_to_utf32(s->data, buffer, len);
+    size_t new_len = ff_utf8_to_utf32(s->data, buffer, len);
 
-    if (failed) {
+    if (new_len == (size_t)-1) {
         s->length = 0;
         if (s->capacity > previous_capacity) {
             s->capacity = previous_capacity;
             s->data = realloc(s->data, s->capacity);
         }
     } else {
-        s->length = len;
+        s->length = new_len;
+    }
+}
+
+void utf32_str_append_utf8(struct utf32_str* m, const char* buffer,
+                           size_t len) {
+    size_t required_capacity =
+        m->length * sizeof(c32_t) + len * sizeof(c32_t);
+    size_t previous_capacity = m->capacity;
+
+    while (required_capacity > m->capacity) {
+        m->capacity *= 2;
+        m->data = realloc(m->data, m->capacity);
+        assert(m->data);
+    }
+
+    size_t new_len =
+        ff_utf8_to_utf32(&m->data[m->length], buffer, len);
+    bool failed = new_len == (size_t)-1;
+
+    if (failed) {
+        if (m->capacity > previous_capacity) {
+            m->capacity = previous_capacity;
+            m->data = realloc(m->data, m->capacity);
+        }
+    } else {
+        m->length += new_len;
     }
 }
 
 void utf32_str_read_file(struct utf32_str* s, const char* path) {
-    FILE* file = fopen(path, "rb");
+    magic_t m = magic_open(MAGIC_MIME);
+    if (!m) printf("init fail\n");
+    int d = magic_load(m, 0);
+    if (d) printf("load fail \n");
+    const char* mf = magic_file(m, path);
+    size_t mf_len = strlen(mf);
+    printf("%s\n", mf);
+    if ((strncmp(mf, "text", fminl(4, mf_len)))) {
+        printf("skipping non text detected\n");
+        magic_close(m);
+        return;
+    }
+    magic_close(m);
+
+    FILE* file = fopen(path, "r");
     assert(file);
 
     fseek(file, 0, SEEK_END);
@@ -61,6 +103,11 @@ void utf32_str_read_file(struct utf32_str* s, const char* path) {
     free(file_contents);
 }
 
+struct read_file_args {
+    struct utf32_str* m;
+    const char* path;
+};
+
 void utf32_str_destroy(struct utf32_str* s) {
     free(s->data);
     s->data = 0;
@@ -68,9 +115,8 @@ void utf32_str_destroy(struct utf32_str* s) {
     s->capacity = 0;
 }
 
-void utf32_str_copy(struct utf32_str* s, char32_t* buffer,
-                    size_t len) {
-    size_t required_capacity = sizeof(char32_t) * len;
+void utf32_str_copy(struct utf32_str* s, c32_t* buffer, size_t len) {
+    size_t required_capacity = sizeof(c32_t) * len;
 
     while (required_capacity > s->capacity) {
         s->capacity *= 2;
@@ -78,7 +124,7 @@ void utf32_str_copy(struct utf32_str* s, char32_t* buffer,
         assert(s->data);
     }
 
-    memcpy(s->data, buffer, len * sizeof(char32_t));
+    memcpy(s->data, buffer, len * sizeof(c32_t));
     s->length = len;
 }
 
@@ -88,15 +134,14 @@ void utf32_str_delete(struct utf32_str* this, size_t pos,
     assert(pos + count <= this->length);
 
     memmove(&this->data[pos], &this->data[pos + count],
-            (this->length - (pos + count)) * sizeof(char32_t));
+            (this->length - (pos + count)) * sizeof(c32_t));
     this->length -= count;
 }
 
 void utf32_str_insert_buf(struct utf32_str* this, size_t pos,
-                          char32_t* str, size_t len) {
+                          c32_t* str, size_t len) {
     assert(pos <= this->length);
-    size_t required_capacity =
-        (this->length + len) * sizeof(char32_t);
+    size_t required_capacity = (this->length + len) * sizeof(c32_t);
 
     while (required_capacity > this->capacity) {
         this->capacity *= 2;
@@ -105,8 +150,8 @@ void utf32_str_insert_buf(struct utf32_str* this, size_t pos,
     }
 
     memmove(&this->data[pos + len], &this->data[pos],
-            (this->length - pos) * sizeof(char32_t));
-    memcpy(&this->data[pos], str, len * sizeof(char32_t));
+            (this->length - pos) * sizeof(c32_t));
+    memcpy(&this->data[pos], str, len * sizeof(c32_t));
     this->length += len;
 }
 
@@ -114,7 +159,7 @@ void utf32_str_clear(struct utf32_str* this) { this->length = 0; }
 
 void utf32_str_insert_utf8_buf(struct utf32_str* s, size_t pos,
                                const char* str, const size_t len) {
-    char32_t utf32_str[len];
+    c32_t utf32_str[len];
     int failed = ff_utf8_to_utf32(utf32_str, str, len);
     assert(!failed);
 
@@ -122,24 +167,24 @@ void utf32_str_insert_utf8_buf(struct utf32_str* s, size_t pos,
 }
 
 void utf32_str_insert_char(struct utf32_str* s, size_t pos,
-                           char32_t chr) {
+                           c32_t chr) {
     utf32_str_insert_buf(s, pos, &chr, 1);
 }
 
-char32_t* str32str32(char32_t* pattern, size_t pattern_length,
-                     char32_t* s2, size_t s2_length) {
-    assert(pattern);
-    assert(s2);
-    assert(pattern_length);
-    if (!s2_length) return 0;
+c32_t* str32str32(const c32_t* substr, size_t substr_len,
+                  const c32_t* str, size_t str_len) {
+    assert(substr);
+    assert(str);
+    assert(substr_len);
+    if (!str_len) return 0;
 
-    if (pattern_length > s2_length) return 0;
+    if (substr_len > str_len) return 0;
 
-    for (size_t i = 0; i < s2_length; i += 1) {
-        if (pattern[0] != s2[i]) continue;
-        bool found = !memcmp(pattern, &s2[i],
-                             pattern_length * sizeof(char32_t));
-        if (found) return &s2[i];
+    for (size_t i = 0; i < str_len; i += 1) {
+        if (substr[0] != str[i]) continue;
+        bool found =
+            !memcmp(substr, &str[i], substr_len * sizeof(c32_t));
+        if (found) return &str[i];
     }
 
     return 0;

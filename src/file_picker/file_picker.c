@@ -1,15 +1,15 @@
 #include "file_picker.h"
 
 #include <fieldfusion.h>
-#include <uchar.h>
 
 #include "../commands.h"
 #include "../config.h"
+#include "../focus.h"
 #include "file_preview.h"
 #include "raylib.h"
 
-static size_t char32_str_len(const char32_t* str) {
-    const char32_t* ptr = str;
+static size_t char32_str_len(const c32_t* str) {
+    const c32_t* ptr = str;
     size_t result = 0;
     while (*ptr != 0) {
         result += 1;
@@ -26,7 +26,7 @@ static void file_picker_reload_options(struct file_picker* fp) {
     for (size_t i = 0; i < files.count; i += 1) {
         const char* file_name = GetFileName(files.paths[i]);
         size_t name_len = strlen(file_name);
-        char32_t option[name_len];
+        c32_t option[name_len];
         (void)ff_utf8_to_utf32(option, file_name, name_len);
 
         char file_path[256] = {0};
@@ -154,10 +154,10 @@ struct file_picker_dimensions file_picker_get_dimensions(
 static void file_picker_draw_preview(
     struct file_picker* fp, struct ff_typography typo,
     struct file_picker_dimensions dimensions, int focus_flags) {
-    const char32_t* selected =
-        fp->menu.options[fp->menu.selected].name;
+    const c32_t* selected = fp->menu.options[fp->menu.selected].name;
 
-    size_t selected_len = char32_str_len(selected);
+    size_t selected_len =
+        fp->menu.options[fp->menu.selected].name_len;
     size_t dir_path_len = strlen(fp->dir);
     size_t selected_file_path_len = dir_path_len + 1 + selected_len;
 
@@ -185,6 +185,7 @@ static void file_picker_draw_preview(
     if (IsPathFile(selected_file_path)) {
         struct file_preview* preview =
             get_preview(selected_file_path);
+        if (!preview) return;
 
         Rectangle file_preview_bounds = {
             .x = dimensions.file_preview_bounds_x,
@@ -196,7 +197,7 @@ static void file_picker_draw_preview(
                          file_preview_bounds.width,
                          file_preview_bounds.height);
         text_view_draw(&preview->text, typo, file_preview_bounds,
-                       focus_flags);
+                       focus_flags, 0, 0, 0, 0);
         EndScissorMode();
     }
 }
@@ -216,7 +217,7 @@ const char* file_picker_perform(struct file_picker* fp,
 
     file_picker_draw_preview(fp, typo, dimensions, focus_flags);
 
-    const char32_t* file_picked = NULL;
+    const c32_t* file_picked = NULL;
 
     if (focus_flags & focus_flag_can_interact) {
         int cmd =

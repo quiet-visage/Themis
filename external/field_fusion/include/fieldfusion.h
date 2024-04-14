@@ -12,7 +12,6 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-#include <uchar.h>
 
 #include "assert.h"
 
@@ -20,7 +19,8 @@ typedef unsigned long int ulong;
 typedef unsigned short int ushort;
 typedef unsigned int uint;
 
-typedef int ff_font_handle_t;
+typedef int ff_font_id_t;
+typedef int c32_t;
 
 struct ff_map_item {
     FT_ULong codepoint;
@@ -40,7 +40,7 @@ struct ht_codepoint_map {
 };
 
 struct ff_map {
-    struct ff_map_item extended_ascii_[0xff];
+    struct ff_map_item extended_ascii[0xff];
     struct ht_codepoint_map codepoint_map;
 };
 
@@ -156,7 +156,7 @@ struct ff_glyph {
     /**
      * Unicode code point of the character.
      */
-    char32_t codepoint;
+    c32_t codepoint;
 
     /**
      * Font size to use for rendering of this character.
@@ -187,7 +187,7 @@ struct ff_dimensions {
 };
 
 struct ff_typography {
-    ff_font_handle_t font;
+    ff_font_id_t font;
     float size;
     uint32_t color;
 };
@@ -206,74 +206,54 @@ struct ff_font_config {
 };
 
 enum ff_print_options {
-    ff_print_options_enable_kerning = 0x2,
-    ff_print_options_print_vertically = 0x4,
+    ff_print_options_enable_kerning = 0x1,
+    ff_print_options_print_vertically = 0x2,
 };
 
-struct ff_utf8_str {
-    char *data;
-    ulong length;
-};
-
-struct ff_utf32_str {
-    char32_t *data;
-    ulong length;
-};
-
-struct ff_print_params {
+struct ff_print {
     struct ff_typography typography;
-    int print_flags;
+    int options;
     struct ff_characteristics characteristics;
-    bool draw_spaces;
 };
 
-struct ff_ortho_params {
-    float scr_left;
-    float scr_right;
-    float scr_bottom;
-    float scr_top;
-    float near;
-    float far;
-};
-
-void ff_initialize(const char *version);
+void ff_initialize(const char *sl_version);
 void ff_terminate();
 struct ff_font_config ff_default_font_config(void);
-ff_font_handle_t ff_new_font_from_memory(
+ff_font_id_t ff_new_load_font_from_memory(
     const unsigned char *bytes, size_t size,
-    const struct ff_font_config config);
-ff_font_handle_t ff_new_font(const char *path,
-                             const struct ff_font_config config);
-void ff_remove_font(const ff_font_handle_t handle);
-int ff_gen_glyphs(const ff_font_handle_t, const char32_t *codepoints,
-                  const ulong codepoints_count);
-void ff_draw(const ff_font_handle_t, const struct ff_glyph *glyphs,
-             const ulong glyphs_count, const float *projection);
+    struct ff_font_config config);
+ff_font_id_t ff_load_font(const char *path,
+                          struct ff_font_config config);
+void ff_unload_font(ff_font_id_t font);
+int ff_gen_glyphs(ff_font_id_t font, const c32_t *codepoints,
+                  ulong codepoints_len);
+void ff_draw(ff_font_id_t font, const struct ff_glyph *glyphs,
+             ulong glyphs_len, const float *projection);
 struct ff_characteristics ff_get_default_characteristics();
 int ff_get_default_print_flags();
-int ff_utf8_to_utf32(char32_t *dest, const char *src,
-                     const ulong count);
-int ff_utf32_to_utf8(char *dest, const char32_t *src,
-                     const ulong count);
-void ff_print_utf8(struct ff_glyphs_vector *vec,
-                   const struct ff_utf8_str str,
-                   const struct ff_print_params params,
-                   const struct ff_position);
-void ff_print_utf32(struct ff_glyphs_vector *vec,
-                    const struct ff_utf32_str str,
-                    const struct ff_print_params params,
-                    const struct ff_position);
-struct ff_dimensions ff_measure_utf32(const ff_font_handle_t,
-                                      const struct ff_utf32_str str,
-                                      const float size,
-                                      const bool with_kerning);
-struct ff_dimensions ff_measure_utf8(const ff_font_handle_t,
-                                     const struct ff_utf8_str str,
-                                     const float size,
-                                     const bool with_kerning);
-void ff_get_ortho_projection(const struct ff_ortho_params params,
+size_t ff_utf8_to_utf32(c32_t *dest, const char *src, ulong src_len);
+size_t ff_utf32_to_utf8(char *dest, const c32_t *src, ulong src_len);
+struct ff_dimensions ff_print_utf8(struct ff_glyphs_vector *vec,
+                                   const char *str, size_t str_len,
+                                   struct ff_print print, float pos_x,
+                                   float pos_y);
+struct ff_dimensions ff_print_utf32(struct ff_glyphs_vector *vec,
+                                    const c32_t *str, size_t str_len,
+                                    struct ff_print print,
+                                    float pos_x, float pos_y);
+struct ff_dimensions ff_measure_utf32(ff_font_id_t font,
+                                      const c32_t *str,
+                                      size_t str_len, float size,
+                                      bool with_kerning);
+struct ff_dimensions ff_measure_utf8(ff_font_id_t font,
+                                     const char *str, size_t str_len,
+                                     float size, bool with_kerning);
+void ff_get_ortho_projection(float left, float right, float bottom,
+                             float top, float near, float far,
                              float dest[][4]);
 struct ff_glyphs_vector ff_glyphs_vector_create();
+void ff_set_glyphs_pos(struct ff_glyph *glyphs, size_t count, float x,
+                       float y);
 void ff_glyphs_vector_destroy(struct ff_glyphs_vector *v);
 void ff_glyphs_vector_push(struct ff_glyphs_vector *v,
                            struct ff_glyph glyph);

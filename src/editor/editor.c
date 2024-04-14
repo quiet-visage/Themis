@@ -2,8 +2,10 @@
 
 #include "../commands.h"
 #include "../config.h"
+#include "../focus.h"
 #include "../key_seq/key_seq.h"
 #include "../keyboard.h"
+#include "line_editor.h"
 
 struct editor_action_param {
     struct editor* m;
@@ -92,12 +94,12 @@ static void editor_paste(struct editor_action_param* param) {
     if (!clipboard_utf8) return;
 
     size_t clipboard_utf8_len = strlen(clipboard_utf8);
-    char32_t clipboard_utf32[clipboard_utf8_len + 1];
+    c32_t clipboard_utf32[clipboard_utf8_len + 1];
     clipboard_utf32[clipboard_utf8_len] = 0;
 
-    int err = ff_utf8_to_utf32(clipboard_utf32, clipboard_utf8,
-                               clipboard_utf8_len);
-    if (err) return;
+    size_t ret = ff_utf8_to_utf32(clipboard_utf32, clipboard_utf8,
+                                  clipboard_utf8_len);
+    if (ret == (size_t)-1) return;
 
     editor_save_undo(param->m);
     size_t cursor_index =
@@ -182,7 +184,7 @@ static void editor_delete(struct editor_action_param* param) {
 }
 
 static void editor_insert_char(struct editor_action_param* param,
-                               char32_t chr) {
+                               c32_t chr) {
     if (chr == U' ' || chr == U'_' || chr == U'\n' ||
         param->m->editor_flags & editor_flag_cursor_moved_manually) {
         editor_save_undo(param->m);
@@ -201,7 +203,7 @@ static void editor_insert_tab(struct editor_action_param* param,
                               uint8_t tab_size) {
     editor_save_undo(param->m);
 
-    char32_t tab[tab_size];
+    c32_t tab[tab_size];
     for (size_t i = 0; i < tab_size; i += 1) tab[i] = U' ';
     buffer_insert_buf(
         param->m->text.buffer,
@@ -298,7 +300,7 @@ static void editor_select_first_search_match(
 
     struct selection* selected_match =
         search_mod_get_selected_match(&param->m->search_mod);
-    if (!selected_match)return;
+    if (!selected_match) return;
     param->m->cursor.row = selected_match->from_line;
     param->m->cursor.column = selected_match->from_col;
 
@@ -312,7 +314,7 @@ static void editor_select_next_search_match(
 
     struct selection* selected_match =
         search_mod_get_selected_match(&param->m->search_mod);
-    if (!selected_match)return;
+    if (!selected_match) return;
     param->m->cursor.row = selected_match->from_line;
     param->m->cursor.column = selected_match->from_col;
 
@@ -326,7 +328,7 @@ static void editor_select_previous_search_match(
 
     struct selection* selected_match =
         search_mod_get_selected_match(&param->m->search_mod);
-    if (!selected_match)return;
+    if (!selected_match) return;
     param->m->cursor.row = selected_match->from_line;
     param->m->cursor.column = selected_match->from_col;
 
@@ -366,11 +368,6 @@ static void editor_move_cursor_on_click(
     param->m->editor_flags |= editor_flag_cursor_moved_manually;
 }
 
-static inline bool is_escape_bind() {
-    return (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_G)) ||
-           IsKeyPressed(KEY_ESCAPE);
-}
-
 static size_t editor_get_cursor_idx(struct editor* m) {
     assert(m->cursor.row < m->text.buffer->lines.length);
 
@@ -381,7 +378,7 @@ static size_t editor_get_cursor_idx(struct editor* m) {
     return line->start + m->cursor.column;
 }
 
-static inline bool is_word_separator(char32_t chr) {
+static inline bool is_word_separator(c32_t chr) {
     return chr == U' ' || chr == U'\n';
 }
 
@@ -389,10 +386,10 @@ static void editor_move_word_right(
     struct editor_action_param* param) {
     size_t idx = editor_get_cursor_idx(param->m);
 
-    char32_t current_char = param->m->text.buffer->str.data[idx];
-    for (char32_t current_char = param->m->text.buffer->str.data[idx];
+    c32_t current_char = param->m->text.buffer->str.data[idx];
+    for (c32_t current_char = param->m->text.buffer->str.data[idx];
          idx && is_word_separator(current_char); idx += 1,
-                  current_char = param->m->text.buffer->str.data[idx])
+               current_char = param->m->text.buffer->str.data[idx])
         ;
 
     for (char current_char = param->m->text.buffer->str.data[idx];
@@ -421,10 +418,10 @@ static void editor_move_word_left(struct editor_action_param* param) {
 
     if (idx) idx -= 1;
 
-    char32_t current_char = param->m->text.buffer->str.data[idx];
-    for (char32_t current_char = param->m->text.buffer->str.data[idx];
+    c32_t current_char = param->m->text.buffer->str.data[idx];
+    for (c32_t current_char = param->m->text.buffer->str.data[idx];
          idx && is_word_separator(current_char); idx -= 1,
-                  current_char = param->m->text.buffer->str.data[idx])
+               current_char = param->m->text.buffer->str.data[idx])
         ;
 
     for (char current_char = param->m->text.buffer->str.data[idx];
@@ -602,18 +599,19 @@ void editor_draw(struct editor* m, struct ff_typography typo,
     }
 
     if (m->editor_mode == editor_mode_search) {
-        struct text_search_highlight search_highlights = {
-            .highlights = m->search_mod.search_matches.data,
-            .length = m->search_mod.search_matches.length};
+        struct decoration decor = {
+            .kind = decoration_selection,
+            .selections = m->search_mod.search_matches.data,
+            .selections_len = m->search_mod.search_matches.length};
         text_view_draw_with_cursor(
             &m->text, typo, bounds, m->cursor,
             m->editor_flags & editor_flag_cursor_moved, focus_flags,
-            &search_highlights);
+            &decor, 1);
     } else {
         text_view_draw_with_cursor(
             &m->text, typo, bounds, m->cursor,
             m->editor_flags & editor_flag_cursor_moved, focus_flags,
-            0);
+            0, 0);
     }
 
     if (m->editor_mode == editor_mode_search) {
@@ -626,6 +624,7 @@ void editor_draw(struct editor* m, struct ff_typography typo,
 void editor_reset_mode(struct editor* m) {
     m->editor_mode = editor_mode_normal;
     search_mod_clear_matches(&m->search_mod);
+    line_editor_clear(&m->search_mod.search_editor);
 }
 
 void editor_clear(struct editor* m) {

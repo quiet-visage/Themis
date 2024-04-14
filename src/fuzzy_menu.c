@@ -7,10 +7,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <uchar.h>
 
 #include "commands.h"
 #include "config.h"
+#include "focus.h"
 #include "fuzzy_menu.h"
 #include "keyboard.h"
 #include "motion.h"
@@ -20,8 +20,8 @@
 #define MENU_MAX_HEIGHT_PERC 0.55f
 #define MENU_EDITOR_OPTIONS_SPACE 6.0f
 
-static uint edit_distance(const char32_t* s1, size_t len1,
-                          const char32_t* s2, size_t len2) {
+static uint edit_distance(const c32_t* s1, size_t len1,
+                          const c32_t* s2, size_t len2) {
     size_t score = 0;
 
     for (size_t i = 0; i < len1; i += 1) {
@@ -92,33 +92,33 @@ static float largest_string_width(size_t count,
                                   struct ff_typography typo) {
     float result = 0;
     for (size_t i = 0; i < count; i += 1) {
-        struct ff_utf32_str str = {.data = options[i].name,
-                                   .length = options[i].name_len};
         float str_width =
-            ff_measure_utf32(typo.font, str, typo.size, true).width;
+            ff_measure_utf32(typo.font, options[i].name,
+                             options[i].name_len, typo.size, true)
+                .width;
         result = fmaxf(result, str_width);
     }
     return result;
 }
 
 void fuzzy_menu_push_option(struct fuzzy_menu* fm,
-                            const char32_t* option, size_t len) {
+                            const c32_t* option, size_t len) {
     assert(len < FUZZY_MENU_OPTION_NAME_CAP);
     fm->options[fm->options_count].name_len = len;
     fm->options[fm->options_count].icon = icon_none_t;
     memcpy(fm->options[fm->options_count++].name, option,
-           len * sizeof(char32_t));
+           len * sizeof(c32_t));
     assert(fm->options_count < FUZZY_MENU_OPTIONS_CAP);
 }
 
 void fuzzy_menu_push_option_with_icon(struct fuzzy_menu* fm,
-                                      const char32_t* option,
-                                      size_t len, enum icon icon) {
+                                      const c32_t* option, size_t len,
+                                      enum icon icon) {
     assert(len < FUZZY_MENU_OPTION_NAME_CAP);
     fm->options[fm->options_count].name_len = len;
     fm->options[fm->options_count].icon = icon;
     memcpy(fm->options[fm->options_count++].name, option,
-           len * sizeof(char32_t));
+           len * sizeof(c32_t));
     assert(fm->options_count < FUZZY_MENU_OPTIONS_CAP);
 }
 
@@ -267,20 +267,18 @@ void fuzzy_menu_draw_options(
     for (size_t i = 0; i < fm->options_count; i++) {
         if (i == fm->selected) selected_y = option_y;
 
-        struct ff_position draw_position = {options_rec.x, option_y};
+        float draw_pos_x = options_rec.x;
+        float draw_pos_y = option_y;
         typo.color = i == fm->selected
                          ? g_cfg.color_scheme.selected_fg
                          : g_cfg.color_scheme.fg;
         ff_print_utf32(
-            &fm->glyphs,
-            (struct ff_utf32_str){
-                .data = (char32_t*)fm->options[i].name,
-                .length = fm->options[i].name_len},
-            (struct ff_print_params){
+            &fm->glyphs, fm->options[i].name, fm->options[i].name_len,
+            (struct ff_print){
                 .typography = typo,
-                .print_flags = ff_get_default_print_flags(),
+                .options = ff_get_default_print_flags(),
                 .characteristics = ff_get_default_characteristics()},
-            draw_position);
+            draw_pos_x, draw_pos_y);
 
         if (fm->options[i].icon != icon_none_t) {
             Texture icon = get_icon(fm->options[i].icon);
@@ -289,7 +287,7 @@ void fuzzy_menu_draw_options(
                                 .width = icon.width,
                                 .height = icon.height};
             Rectangle dest = {.x = dimensions.bounds_x,
-                              .y = draw_position.y,
+                              .y = draw_pos_y,
                               icon.width,
                               icon.height};
             Vector2 origin = {.x = 0, .y = 0};
@@ -311,11 +309,9 @@ void fuzzy_menu_draw_options(
                   GetFrameTime());
     float projection[4][4];
     ff_get_ortho_projection(
-        (struct ff_ortho_params){
-            0, GetScreenWidth(),
-            GetScreenHeight() + fm->motion.position[0],
-            fm->motion.position[0], -1, 1},
-        projection);
+        0, GetScreenWidth(),
+        GetScreenHeight() + fm->motion.position[0],
+        fm->motion.position[0], -1.0f, 1.0f, projection);
 
     ff_draw(typo.font, fm->glyphs.data, fm->glyphs.size,
             (float*)projection);
@@ -330,8 +326,7 @@ void fuzzy_menu_sel_prev(struct fuzzy_menu* fm) {
     if (fm->selected > 0) fm->selected -= 1;
 }
 
-const char32_t* fuzzy_menu_handle_interactions(
-    struct fuzzy_menu* fm) {
+const c32_t* fuzzy_menu_handle_interactions(struct fuzzy_menu* fm) {
     int cmd = key_seq_handler_get_command(g_cfg.keybinds.fuzzy_menu);
 
     switch (cmd) {
@@ -367,9 +362,9 @@ void fuzzy_menu_on_buffer_change(struct fuzzy_menu* fm) {
     fm->selected = 0;
 }
 
-const char32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
-                                   struct ff_typography typo,
-                                   int focus_flags) {
+const c32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
+                                struct ff_typography typo,
+                                int focus_flags) {
     const Vector2 window_size = {.x = GetScreenWidth(),
                                  .y = GetScreenHeight()};
 
