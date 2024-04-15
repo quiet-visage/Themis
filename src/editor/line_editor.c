@@ -278,7 +278,7 @@ static void line_editor_move_word_right(
     c32_t current_char = param->m->text.buffer->str.data[idx];
     for (c32_t current_char = param->m->text.buffer->str.data[idx];
          idx && current_char == U' '; idx += 1,
-                  current_char = param->m->text.buffer->str.data[idx])
+               current_char = param->m->text.buffer->str.data[idx])
         ;
 
     while (idx < param->m->text.buffer->str.length &&
@@ -302,7 +302,7 @@ static void line_editor_move_word_left(
     c32_t current_char = param->m->text.buffer->str.data[idx];
     for (c32_t current_char = param->m->text.buffer->str.data[idx];
          idx && current_char == U' '; idx -= 1,
-                  current_char = param->m->text.buffer->str.data[idx])
+               current_char = param->m->text.buffer->str.data[idx])
         ;
 
     while (idx && param->m->text.buffer->str.data[idx] != U' ') {
@@ -350,7 +350,8 @@ static void line_editor_handle_mode_normal(
     if (cmd != -1) g_line_editor_cmd_table[cmd](param);
 
     int char_pressed = get_char();
-    if (char_pressed) line_editor_insert_char(param, char_pressed);
+    if (!key_seq_handler_key_seq_active() && char_pressed)
+        line_editor_insert_char(param, char_pressed);
 }
 
 static void line_editor_handle_mode_selection(
@@ -388,7 +389,7 @@ static void line_editor_handle_mode_selection(
     line_editor_end_mode_selection(param);
 }
 
-void line_editor_handle_interactions(
+void line_editor_handle_user_input(
     struct line_editor_action_param* param) {
     switch (param->m->line_editor_mode) {
         case line_editor_mode_normal:
@@ -405,7 +406,7 @@ void line_editor_draw(struct line_editor* m,
                       int focus_flags) {
     if (focus_flags & focus_flag_can_interact) {
         struct line_editor_action_param param = {m, typo, bounds};
-        line_editor_handle_interactions(&param);
+        line_editor_handle_user_input(&param);
     }
 
     focus_flags &= ~focus_flag_can_scroll;

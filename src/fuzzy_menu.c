@@ -10,7 +10,6 @@
 
 #include "commands.h"
 #include "config.h"
-#include "focus.h"
 #include "fuzzy_menu.h"
 #include "keyboard.h"
 #include "motion.h"
@@ -20,8 +19,8 @@
 #define MENU_MAX_HEIGHT_PERC 0.55f
 #define MENU_EDITOR_OPTIONS_SPACE 6.0f
 
-static uint edit_distance(const c32_t* s1, size_t len1,
-                          const c32_t* s2, size_t len2) {
+static uint similiarity_score(const c32_t* s1, size_t len1,
+                              const c32_t* s2, size_t len2) {
     size_t score = 0;
 
     for (size_t i = 0; i < len1; i += 1) {
@@ -39,22 +38,22 @@ static uint edit_distance(const c32_t* s1, size_t len1,
     return score;
 }
 
-void fuzzy_menu_create(struct fuzzy_menu* o) {
-    line_editor_create(&o->editor);
-    o->editor.text.buffer = malloc(sizeof(struct buffer));
-    buffer_create(o->editor.text.buffer, utf32_str_create());
-    buffer_save_undo(o->editor.text.buffer,
+void fuzzy_menu_create(struct fuzzy_menu* m) {
+    line_editor_create(&m->editor);
+    m->editor.text.buffer = malloc(sizeof(struct buffer));
+    buffer_create(m->editor.text.buffer, utf32_str_create());
+    buffer_save_undo(m->editor.text.buffer,
                      (struct text_position){0});
-    o->vertical_scroll = 0;
-    o->glyphs = ff_glyphs_vector_create();
-    o->previous_buffer_size = 0;
-    o->selected = 0;
-    memset(&o->options, 0,
+    m->vertical_scroll = 0;
+    m->glyphs = ff_glyphs_vector_create();
+    m->previous_buffer_size = 0;
+    m->selected = 0;
+    memset(&m->options, 0,
            sizeof(struct fuzzy_menu_option) * FUZZY_MENU_OPTIONS_CAP);
-    o->options_count = 0;
-    o->motion = motion_new();
-    o->motion.f = 1.9f;
-    o->motion.z = 0.9f;
+    m->options_count = 0;
+    m->motion = motion_new();
+    m->motion.f = 1.9f;
+    m->motion.z = 0.9f;
 }
 
 void fuzzy_menu_destroy(struct fuzzy_menu* o) {
@@ -125,23 +124,20 @@ void fuzzy_menu_push_option_with_icon(struct fuzzy_menu* fm,
 static void quick_sort_options(struct fuzzy_menu_option options[],
                                int low, int high) {
     if (low < high) {
-        struct fuzzy_menu_option pivot = options[(
-            size_t)((low + high) * 0.5f)];  // Selecting the middle
-                                            // element as the pivot
+        struct fuzzy_menu_option pivot =
+            options[(size_t)((low + high) * 0.5f)];
+
         int i = low;
         int j = high;
 
         while (i <= j) {
             while (options[i].edit_distance > pivot.edit_distance)
-                i++;  // Moving elements smaller than pivot to the
-                      // left
+                i++;
             while (options[j].edit_distance < pivot.edit_distance)
-                j--;  // Moving elements greater than pivot to the
-                      // right
+                j--;
 
             if (i <= j) {
-                struct fuzzy_menu_option temp =
-                    options[i];  // Swapping elements
+                struct fuzzy_menu_option temp = options[i];
                 options[i] = options[j];
                 options[j] = temp;
 
@@ -150,7 +146,6 @@ static void quick_sort_options(struct fuzzy_menu_option options[],
             }
         }
 
-        // Recursively sort the two partitions
         if (low < j) quick_sort_options(options, low, j);
         if (i < high) quick_sort_options(options, i, high);
     }
@@ -326,15 +321,11 @@ void fuzzy_menu_sel_prev(struct fuzzy_menu* fm) {
     if (fm->selected > 0) fm->selected -= 1;
 }
 
-const c32_t* fuzzy_menu_handle_interactions(struct fuzzy_menu* fm) {
+const c32_t* fuzzy_menu_handle_user_input(struct fuzzy_menu* fm) {
     int cmd = key_seq_handler_get_command(g_cfg.keybinds.fuzzy_menu);
-
     switch (cmd) {
         case menu_cmd_move_up: fuzzy_menu_sel_prev(fm); break;
-        case menu_cmd_move_down:
-            fuzzy_menu_sel_next(fm);
-            break;
-            break;
+        case menu_cmd_move_down: fuzzy_menu_sel_next(fm);
     }
 
     if (is_key_sticky(KEY_ENTER)) {
@@ -352,7 +343,7 @@ bool fuzzy_menu_buffer_changed(struct fuzzy_menu* fm) {
 
 void fuzzy_menu_on_buffer_change(struct fuzzy_menu* fm) {
     for (size_t i = 0; i < fm->options_count; i += 1) {
-        fm->options[i].edit_distance = edit_distance(
+        fm->options[i].edit_distance = similiarity_score(
             fm->editor.text.buffer->str.data,
             fm->editor.text.buffer->str.length, fm->options[i].name,
             fm->options[i].name_len);
@@ -360,27 +351,6 @@ void fuzzy_menu_on_buffer_change(struct fuzzy_menu* fm) {
     quick_sort_options(fm->options, 0, fm->options_count - 1);
     fm->previous_buffer_size = fm->editor.text.buffer->str.length;
     fm->selected = 0;
-}
-
-const c32_t* fuzzy_menu_perform(struct fuzzy_menu* fm,
-                                struct ff_typography typo,
-                                int focus_flags) {
-    const Vector2 window_size = {.x = GetScreenWidth(),
-                                 .y = GetScreenHeight()};
-
-    struct fuzzy_menu_dimensions dimensions =
-        fuzzy_menu_get_dimensions(fm, typo, window_size);
-
-    fuzzy_menu_draw_editor(fm, typo, focus_flags, dimensions);
-    fuzzy_menu_draw_options(fm, typo, dimensions);
-
-    if (fuzzy_menu_buffer_changed(fm))
-        fuzzy_menu_on_buffer_change(fm);
-
-    if (focus_flags & focus_flag_can_interact)
-        return fuzzy_menu_handle_interactions(fm);
-
-    return NULL;
 }
 
 void fuzzy_menu_reset(struct fuzzy_menu* fm) {

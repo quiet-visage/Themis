@@ -8,7 +8,7 @@ struct file_picker {
 };
 
 struct file_picker file_picker_create();
-const char* file_picker_perform(struct file_picker* fp,
-                                struct ff_typography typo,
-                                int focus_flags);
+const char* file_picker_ui(struct file_picker* fp,
+                           struct ff_typography typo,
+                           int focus_flags);
 void file_picker_destroy(struct file_picker* fp);

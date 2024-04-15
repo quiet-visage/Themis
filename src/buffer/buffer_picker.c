@@ -111,15 +111,16 @@ struct buffer* buffer_picker_get_selected_buffer() {
     char selected_name[selected_name_len + 1];
     selected_name[selected_name_len] = 0;
 
-    bool conversion_failed = ff_utf32_to_utf8(
-        selected_name,
-        g_fuzzy_menu.options[g_fuzzy_menu.selected].name,
-        selected_name_len) == (size_t)-1;
+    bool conversion_failed =
+        ff_utf32_to_utf8(
+            selected_name,
+            g_fuzzy_menu.options[g_fuzzy_menu.selected].name,
+            selected_name_len) == (size_t)-1;
     assert(!conversion_failed);
     return buffer_handler_get(selected_name);
 }
 
-void buffer_picker_update(void) {
+void buffer_picker_update_options(void) {
     fuzzy_menu_reset(&g_fuzzy_menu);
 
     size_t buffer_count = buffer_handler_count();
@@ -145,8 +146,8 @@ void buffer_picker_update(void) {
     g_text_preview.buffer = selected_buffer;
 }
 
-struct buffer* buffer_picker_perform(struct ff_typography typo,
-                                     int focus_flags) {
+struct buffer* buffer_picker_ui(struct ff_typography typo,
+                                int focus_flags) {
     struct buffer_picker_dimensions dimensions =
         buffer_picker_get_dimensions(typo);
     fuzzy_menu_draw_editor(&g_fuzzy_menu, typo, focus_flags,
@@ -157,6 +158,10 @@ struct buffer* buffer_picker_perform(struct ff_typography typo,
     struct buffer* selected_buffer =
         buffer_picker_get_selected_buffer();
     assert(selected_buffer);
+
+    if (fuzzy_menu_buffer_changed(&g_fuzzy_menu)) {
+        fuzzy_menu_on_buffer_change(&g_fuzzy_menu);
+    }
 
     if (g_previous_selected != g_fuzzy_menu.selected) {
         g_text_preview.buffer = selected_buffer;
@@ -175,7 +180,7 @@ struct buffer* buffer_picker_perform(struct ff_typography typo,
     text_view_draw(&g_text_preview, typo, preview_bounds, focus_flags,
                    0, 0, 0, 0);
 
-    if (fuzzy_menu_handle_interactions(&g_fuzzy_menu)) {
+    if (fuzzy_menu_handle_user_input(&g_fuzzy_menu)) {
         return selected_buffer;
     }
 

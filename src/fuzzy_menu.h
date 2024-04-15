@@ -60,18 +60,15 @@ void fuzzy_menu_destroy(struct fuzzy_menu *fm);
 void fuzzy_menu_push_option(struct fuzzy_menu *fm,
                             const c32_t *option, size_t len);
 void fuzzy_menu_push_option_with_icon(struct fuzzy_menu *fm,
-                                      const c32_t *option,
-                                      size_t len, enum icon icon);
-const c32_t *fuzzy_menu_perform(struct fuzzy_menu *fm,
-                                   struct ff_typography typo,
-                                   int focus_flags);
+                                      const c32_t *option, size_t len,
+                                      enum icon icon);
 void fuzzy_menu_reset(struct fuzzy_menu *fm);
 void fuzzy_menu_sel_next(struct fuzzy_menu *fm);
 void fuzzy_menu_sel_prev(struct fuzzy_menu *fm);
 struct fuzzy_menu_dimensions fuzzy_menu_get_dimensions(
     struct fuzzy_menu *fm, struct ff_typography typo,
     Vector2 window_size);
-const c32_t *fuzzy_menu_handle_interactions(struct fuzzy_menu *fm);
+const c32_t *fuzzy_menu_handle_user_input(struct fuzzy_menu *fm);
 bool fuzzy_menu_buffer_changed(struct fuzzy_menu *fm);
 void fuzzy_menu_on_buffer_change(struct fuzzy_menu *fm);
 void fuzzy_menu_draw_options(struct fuzzy_menu *fm,

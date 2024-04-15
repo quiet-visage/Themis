@@ -8,7 +8,7 @@
 #include "file_preview.h"
 #include "raylib.h"
 
-static size_t char32_str_len(const c32_t* str) {
+static size_t c32_str_len(const c32_t* str) {
     const c32_t* ptr = str;
     size_t result = 0;
     while (*ptr != 0) {
@@ -202,7 +202,7 @@ static void file_picker_draw_preview(
     }
 }
 
-const char* file_picker_perform(struct file_picker* fp,
+const char* file_picker_ui(struct file_picker* fp,
                                 struct ff_typography typo,
                                 int focus_flags) {
     struct file_picker_dimensions dimensions =
@@ -229,14 +229,14 @@ const char* file_picker_perform(struct file_picker* fp,
                     break;
             }
         }
-        file_picked = fuzzy_menu_handle_interactions(&fp->menu);
+        file_picked = fuzzy_menu_handle_user_input(&fp->menu);
     }
 
     if (file_picked) {
         const char* dir_path = fp->dir;
         size_t dir_path_len = strlen(dir_path);
 
-        size_t result_len = char32_str_len(file_picked);
+        size_t result_len = c32_str_len(file_picked);
         assert(dir_path_len + 1 + result_len < 256);
         memcpy(fp->result, dir_path, dir_path_len);
         memcpy(fp->result + dir_path_len, "/", 1);

@@ -39,10 +39,10 @@ int tile_rect_sort_cmp(const void* x, const void* y) {
     return (a->x - b->x) ? a->x - b->x : a->y - b->y;
 }
 
-static void tile_perform_internal(struct layout_action* actions,
-                                  size_t actions_count,
-                                  Rectangle* recs, size_t* recs_count,
-                                  bool sort) {
+static void tile_calculate_internal(struct layout_action* actions,
+                                    size_t actions_count,
+                                    Rectangle* recs,
+                                    size_t* recs_count, bool sort) {
     (*recs_count) = 1;
     recs[0] = g_root_rectangle;
 
@@ -74,9 +74,9 @@ static void tile_perform_internal(struct layout_action* actions,
 }
 
 static void tile_update_mirror(void) {
-    tile_perform_internal(g_layout_actions, g_layout_actions_count,
-                          g_sorted_mirror, &g_sorted_mirror_count,
-                          true);
+    tile_calculate_internal(g_layout_actions, g_layout_actions_count,
+                            g_sorted_mirror, &g_sorted_mirror_count,
+                            true);
     assert(g_sorted_mirror_count == g_rects_count);
 }
 
@@ -110,9 +110,9 @@ size_t tile_get_non_sorted_n(size_t n) {
     return (size_t)-1;
 }
 
-void tile_perform(void) {
-    tile_perform_internal(g_layout_actions, g_layout_actions_count,
-                          g_rects, &g_rects_count, false);
+void tile_calculate(void) {
+    tile_calculate_internal(g_layout_actions, g_layout_actions_count,
+                            g_rects, &g_rects_count, false);
     tile_update_mirror();
 }
 
@@ -129,7 +129,7 @@ bool tile_split(enum split_kind split_kind, size_t n) {
     g_layout_actions[g_layout_actions_count++] =
         (struct layout_action){.split_kind = split_kind,
                                .split_index = n};
-    tile_perform();
+    tile_calculate();
     return true;
 }
 
@@ -137,7 +137,7 @@ void tile_remove(size_t n) {
     assert(n < g_rects_count);
     g_layout_actions_count -= 1;
     g_rects_count -= 1;
-    tile_perform();
+    tile_calculate();
 }
 
 static size_t tile_get_right_rectangles_count(size_t n) {

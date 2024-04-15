@@ -569,7 +569,7 @@ static void editor_handle_mode_search(
     if (cmd != -1) g_editor_cmd_table[cmd](param);
 }
 
-static void editor_handle_interactions(
+static void editor_handle_user_input(
     struct editor_action_param* param) {
     editor_move_cursor_on_click(param);
     switch (param->m->editor_mode) {
@@ -588,7 +588,7 @@ void editor_draw(struct editor* m, struct ff_typography typo,
     struct editor_action_param param = {
         .m = m, .typo = typo, .bounds = bounds};
     if (focus_flags & focus_flag_can_interact) {
-        editor_handle_interactions(&param);
+        editor_handle_user_input(&param);
     }
     editor_ensure_cursor_idx_within_str(m);
 

@@ -1,3 +1,5 @@
+// TODO: update fieldfusion
+
 #include <assert.h>
 #include <raylib.h>
 
@@ -61,14 +63,20 @@ static void calculate_areas(void) {
     g_area.pane.height = win_height - 40;
 }
 
+static void focus_reset(struct focus* focus) {
+    memset(focus, 0, sizeof(*focus));
+}
+
 static void focus_file_picker(struct focus* focus) {
+    focus_reset(focus);
     focus->file_picker =
         focus_flag_can_interact | focus_flag_can_scroll;
     focus->pane_controller = 0;
 }
 
 static void focus_buffer_picker(struct focus* focus) {
-    buffer_picker_update();
+    focus_reset(focus);
+    buffer_picker_update_options();
     focus->file_picker = 0;
     focus->buffer_picker =
         focus_flag_can_interact | focus_flag_can_scroll;
@@ -76,6 +84,7 @@ static void focus_buffer_picker(struct focus* focus) {
 }
 
 static void focus_pane_controller(struct focus* focus) {
+    focus_reset(focus);
     focus->pane_controller =
         focus_flag_can_interact | focus_flag_can_scroll;
     focus->file_picker = 0;
@@ -158,7 +167,7 @@ static void main_end_frame(void) {
 }
 
 static void handle_file_picker(void) {
-    const char* result = file_picker_perform(
+    const char* result = file_picker_ui(
         &g_file_picker, g_cfg.typo, g_focus.file_picker);
     if (!result) return;
     pane_controller_open_in_focused(result);
@@ -167,14 +176,14 @@ static void handle_file_picker(void) {
 
 static void handle_buffer_picker(void) {
     struct buffer* buffer_picked =
-        buffer_picker_perform(g_cfg.typo, g_focus.buffer_picker);
+        buffer_picker_ui(g_cfg.typo, g_focus.buffer_picker);
 
     if (!buffer_picked) return;
     pane_controller_set_focused_buffer(buffer_picked);
     focus_pane_controller(&g_focus);
 }
 
-static void handle_open_file_link(struct cmd_arg *cmd) {
+static void handle_open_file_link(struct cmd_arg* cmd) {
     struct file_link* fl = cmd->arg;
     char fname[fl->path_len + 1];
     fname[fl->path_len] = 0;
@@ -184,7 +193,7 @@ static void handle_open_file_link(struct cmd_arg *cmd) {
     assert(ed);
     ed->editor.cursor.column = fl->column;
     assert(fl->row >= 0);
-    ed->editor.cursor.row = fl->row-1;
+    ed->editor.cursor.row = fl->row - 1;
 }
 
 int main(void) {

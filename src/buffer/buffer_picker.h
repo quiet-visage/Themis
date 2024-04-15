@@ -1,8 +1,8 @@
 #pragma once
-#include "buffer_handler.h"
+#include <fieldfusion.h>
 
 void buffer_picker_init(void);
 void buffer_picker_terminate(void);
-void buffer_picker_update(void);
-struct buffer* buffer_picker_perform(struct ff_typography typo,
-                                     int focus_flags);
+void buffer_picker_update_options(void);
+struct buffer* buffer_picker_ui(struct ff_typography typo,
+                                int focus_flags);

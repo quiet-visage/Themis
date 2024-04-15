@@ -28,7 +28,7 @@ struct file_editor* pane_controller_get_focused(void) {
 
 void pane_controller_update_bounds(Rectangle bounds) {
     tile_set_root(bounds);
-    tile_perform();
+    tile_calculate();
 }
 
 void pane_controller_init(Rectangle bounds) {
