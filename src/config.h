@@ -5,14 +5,14 @@
 #include "highlighter/highlighter.h"
 #include "key_seq/key_seq.h"
 
-struct layout {
+typedef struct {
     float text_spacing;
     float padding;
     float gap;
     float search_box_width;
-};
+} layout_t;
 
-struct color_scheme {
+typedef struct {
     int bg;
     int fg;
     int text_mute;
@@ -23,37 +23,38 @@ struct color_scheme {
     int surface1_bg;
     int highlight_fg;
     int syntax[token_kind_count_t];
-};
+} color_scheme_t;
 
-struct editor_keybinds {
+typedef struct {
     seq_group_id_t mode_normal;
     seq_group_id_t mode_selection;
     seq_group_id_t mode_search;
-};
+} editor_keybinds_t;
 
-struct line_editor_keybinds {
+typedef struct {
     seq_group_id_t mode_normal;
     seq_group_id_t mode_selection;
-};
+} line_editor_keybinds_t;
 
-struct keybind_groups {
-    struct editor_keybinds editor;
-    struct line_editor_keybinds line_editor;
+typedef struct {
+    editor_keybinds_t editor;
+    line_editor_keybinds_t line_editor;
     seq_group_id_t pane;
     seq_group_id_t fuzzy_menu;
     seq_group_id_t main;
     seq_group_id_t file_picker;
     seq_group_id_t file_editor;
-};
+} keybind_groups_t;
 
-struct config {
-    struct layout layout;
-    struct color_scheme color_scheme;
-    struct keybind_groups keybinds;
+typedef struct {
+    layout_t layout;
+    color_scheme_t color_scheme;
+    keybind_groups_t keybinds;
     unsigned char scroll_off;
-    struct ff_typography typo;
-};
+    ff_typo_t typo;
+    float scr_proj[4][4];
+} config_t;
 
-extern struct config g_cfg;
+extern config_t g_cfg;
 
 void config_init(void);

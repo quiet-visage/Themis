@@ -1,2 +1,0 @@
-/usr/bin/ar qc libtree_sitter_cpp.a CMakeFiles/tree_sitter_cpp.dir/parser.c.o CMakeFiles/tree_sitter_cpp.dir/scanner.c.o
-/usr/bin/ranlib libtree_sitter_cpp.a

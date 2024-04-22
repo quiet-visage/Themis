@@ -9,10 +9,10 @@
 
 #include "config.h"
 
-struct layout_action {
+typedef struct {
     enum split_kind split_kind;
     size_t split_index;
-};
+} layout_action_t;
 
 #define MAX_ACTIONS 512
 #define MAX_RECTS 512
@@ -23,7 +23,7 @@ static Rectangle g_rects[MAX_RECTS] = {0};
 static Rectangle g_sorted_mirror[MAX_RECTS] = {0};
 static size_t g_sorted_mirror_count = 0;
 static size_t g_rects_count = 0;
-static struct layout_action g_layout_actions[MAX_ACTIONS] = {0};
+static layout_action_t g_layout_actions[MAX_ACTIONS] = {0};
 static size_t g_layout_actions_count = 0;
 
 Rectangle tile_get_rect(size_t n) {
@@ -39,7 +39,7 @@ int tile_rect_sort_cmp(const void* x, const void* y) {
     return (a->x - b->x) ? a->x - b->x : a->y - b->y;
 }
 
-static void tile_calculate_internal(struct layout_action* actions,
+static void tile_calculate_internal(layout_action_t* actions,
                                     size_t actions_count,
                                     Rectangle* recs,
                                     size_t* recs_count, bool sort) {
@@ -47,7 +47,7 @@ static void tile_calculate_internal(struct layout_action* actions,
     recs[0] = g_root_rectangle;
 
     for (size_t i = 0; i < actions_count; i += 1) {
-        struct layout_action action = actions[i];
+        layout_action_t action = actions[i];
         assert(action.split_index < *recs_count);
 
         if (action.split_kind == split_horizontal) {
@@ -127,8 +127,7 @@ bool tile_split(enum split_kind split_kind, size_t n) {
         return false;
 
     g_layout_actions[g_layout_actions_count++] =
-        (struct layout_action){.split_kind = split_kind,
-                               .split_index = n};
+        (layout_action_t){.split_kind = split_kind, .split_index = n};
     tile_calculate();
     return true;
 }

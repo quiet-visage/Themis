@@ -5,23 +5,22 @@
 #include "../dyn_strings/utf32_string.h"
 #include "../highlighter/highlighter.h"
 
-struct buffer_history_item {
-    struct utf32_str str;
-    struct text_position cursor;
-};
+typedef struct {
+    utf32_str_t str;
+    text_pos_t cursor;
+} buffer_history_item_t;
 
-struct buffer_history {
-    struct buffer_history_item* data;
+typedef struct {
+    buffer_history_item_t* data;
     size_t length;
     size_t capacity;
-};
+} buffer_history_t;
 
-struct buffer_history buffer_history_create();
-void buffer_history_destroy(struct buffer_history* m);
-void buffer_history_copy_and_push(struct buffer_history* i,
-                                  struct utf32_str* str,
-                                  struct text_position cursor);
-void buffer_history_pop(struct buffer_history* m);
-void buffer_history_clear(struct buffer_history* m);
-struct buffer_history_item* buffer_history_top(
-    struct buffer_history* m);
+buffer_history_t buffer_history_create();
+void buffer_history_destroy(buffer_history_t* m);
+void buffer_history_copy_and_push(buffer_history_t* i,
+                                  utf32_str_t* str,
+                                  text_pos_t cursor);
+void buffer_history_pop(buffer_history_t* m);
+void buffer_history_clear(buffer_history_t* m);
+buffer_history_item_t* buffer_history_top(buffer_history_t* m);

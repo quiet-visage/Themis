@@ -3,20 +3,20 @@
 
 #define SEQUENCE_ASSOCIATION_CHILD_LIMIT 64
 
-struct key_combination {
+typedef struct {
     int mod_combo;
     int key;
-};
+} key_combination_t;
 
-struct sequence_association {
-    struct key_combination combination;
+typedef struct sequence_association {
+    key_combination_t combination;
     int command;
     struct sequence_association*
         children[SEQUENCE_ASSOCIATION_CHILD_LIMIT];
     size_t children_count;
-};
+} sequence_association_t;
 
-struct sequence_association* sequence_association_create(void);
-void sequence_association_destroy(struct sequence_association* m);
-void sequence_association_push(struct sequence_association* m,
-                               struct sequence_association* seq);
+sequence_association_t* sequence_association_create(void);
+void sequence_association_destroy(sequence_association_t* m);
+void sequence_association_push(sequence_association_t* m,
+                               sequence_association_t* seq);

@@ -11,36 +11,35 @@
 #include "../key_seq/key_seq.h"
 #include "../keyboard.h"
 
-struct line_editor_action_param {
-    struct line_editor* m;
-    struct ff_typography typo;
+typedef struct {
+    line_editor_t* m;
+    ff_typo_t typo;
     Rectangle bounds;
-};
+} action_param_t;
 
-static void line_editor_save_undo(struct line_editor* m) {
+static void line_editor_save_undo(line_editor_t* m) {
     buffer_save_undo(m->text.buffer, m->cursor);
 }
 
-static void line_editor_undo(struct line_editor_action_param* param) {
+static void line_editor_undo(action_param_t* param) {
     if (!param->m->text.buffer->undo_history.length) return;
-    struct text_position undo_cursor_pos =
+    text_pos_t undo_cursor_pos =
         buffer_undo(param->m->text.buffer, param->m->cursor);
     if (undo_cursor_pos.row == (size_t)-1) return;
     param->m->cursor = undo_cursor_pos;
     param->m->line_editor_flags |= line_editor_flag_cursor_moved;
 }
 
-static void line_editor_redo(struct line_editor_action_param* param) {
+static void line_editor_redo(action_param_t* param) {
     if (!param->m->text.buffer->redo_history.length) return;
-    struct text_position redo_cursor_pos =
+    text_pos_t redo_cursor_pos =
         buffer_redo(param->m->text.buffer, param->m->cursor);
     if (redo_cursor_pos.row == (size_t)-1) return;
     param->m->cursor = redo_cursor_pos;
     param->m->line_editor_flags |= line_editor_flag_cursor_moved;
 }
 
-static void line_editor_move_cursor_on_click(
-    struct line_editor_action_param* param) {
+static void line_editor_move_cursor_on_click(action_param_t* param) {
     if (!IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return;
     Vector2 mouse = GetMousePosition();
     if (!CheckCollisionPointRec(mouse, param->bounds)) return;
@@ -58,18 +57,17 @@ static void line_editor_move_cursor_on_click(
         line_editor_flag_cursor_moved_manually;
 }
 
-void line_editor_create(struct line_editor* m) {
-    memset(m, 0, sizeof(struct line_editor));
+void line_editor_create(line_editor_t* m) {
+    memset(m, 0, sizeof(line_editor_t));
     m->text = text_view_create();
     m->line_editor_mode = line_editor_mode_normal;
 }
 
-void line_editor_destroy(struct line_editor* o) {
+void line_editor_destroy(line_editor_t* o) {
     text_view_destroy(&o->text);
 }
 
-static void line_editor_move_char_right(
-    struct line_editor_action_param* param) {
+static void line_editor_move_char_right(action_param_t* param) {
     assert(param->m->text.buffer);
     if (param->m->cursor.column + 1 >
         param->m->text.buffer->str.length)
@@ -80,16 +78,14 @@ static void line_editor_move_char_right(
         line_editor_flag_cursor_moved_manually;
 }
 
-static void line_editor_move_beg_of_line(
-    struct line_editor_action_param* param) {
+static void line_editor_move_beg_of_line(action_param_t* param) {
     param->m->cursor.column = 0;
     param->m->line_editor_flags |= line_editor_flag_cursor_moved;
     param->m->line_editor_flags |=
         line_editor_flag_cursor_moved_manually;
 }
 
-static void line_editor_move_end_of_line(
-    struct line_editor_action_param* param) {
+static void line_editor_move_end_of_line(action_param_t* param) {
     assert(param->m->text.buffer);
     param->m->cursor.column = param->m->text.buffer->str.length;
     param->m->line_editor_flags |= line_editor_flag_cursor_moved;
@@ -97,28 +93,24 @@ static void line_editor_move_end_of_line(
         line_editor_flag_cursor_moved_manually;
 }
 
-static void line_editor_move_char_left(
-    struct line_editor_action_param* param) {
+static void line_editor_move_char_left(action_param_t* param) {
     if (param->m->cursor.column > 0) param->m->cursor.column -= 1;
     param->m->line_editor_flags |= line_editor_flag_cursor_moved;
     param->m->line_editor_flags |=
         line_editor_flag_cursor_moved_manually;
 }
 
-static void line_editor_begin_mode_selection(
-    struct line_editor_action_param* param) {
+static void line_editor_begin_mode_selection(action_param_t* param) {
     param->m->line_editor_mode = line_editor_mode_selection;
     param->m->selection_begin = param->m->cursor.column;
 }
 
-static void line_editor_end_mode_selection(
-    struct line_editor_action_param* param) {
+static void line_editor_end_mode_selection(action_param_t* param) {
     param->m->line_editor_mode = line_editor_mode_normal;
     text_view_clear_selection(&param->m->text);
 }
 
-static void line_editor_delete_selection(
-    struct line_editor_action_param* param) {
+static void line_editor_delete_selection(action_param_t* param) {
     assert(param->m->line_editor_mode == line_editor_mode_selection);
     if (!(param->m->text.text_flags & text_flag_has_selection)) {
         line_editor_end_mode_selection(param);
@@ -129,12 +121,10 @@ static void line_editor_delete_selection(
     param->m->cursor.row = param->m->text.selection.from_line;
     param->m->cursor.column = param->m->text.selection.from_col;
 
-    struct line line_beg =
-        param->m->text.buffer->lines
-            .data[param->m->text.selection.from_line];
-    struct line line_end =
-        param->m->text.buffer->lines
-            .data[param->m->text.selection.to_line];
+    line_t line_beg = param->m->text.buffer->lines
+                          .data[param->m->text.selection.from_line];
+    line_t line_end = param->m->text.buffer->lines
+                          .data[param->m->text.selection.to_line];
 
     size_t beg_index =
         line_beg.start + param->m->text.selection.from_col;
@@ -146,14 +136,13 @@ static void line_editor_delete_selection(
     line_editor_end_mode_selection(param);
 }
 
-static void line_editor_delete_char_at(struct line_editor* m,
+static void line_editor_delete_char_at(line_editor_t* m,
                                        size_t index) {
     assert(index <= m->text.buffer->str.length);
     buffer_delete(m->text.buffer, index, 1);
 }
 
-static void line_editor_backspace(
-    struct line_editor_action_param* param) {
+static void line_editor_backspace(action_param_t* param) {
     assert(param->m->text.buffer);
     if (param->m->line_editor_mode & line_editor_mode_selection) {
         line_editor_delete_selection(param);
@@ -171,15 +160,14 @@ static void line_editor_backspace(
     line_editor_move_char_left(param);
 }
 
-static void line_editor_delete_rest_of_line(
-    struct line_editor_action_param* param) {
+static void line_editor_delete_rest_of_line(action_param_t* param) {
     assert(param->m->text.buffer);
     line_editor_save_undo(param->m);
 
     if (param->m->text.text_flags & text_flag_has_selection)
         return line_editor_delete_selection(param);
 
-    struct line line =
+    line_t line =
         param->m->text.buffer->lines.data[param->m->cursor.row];
     size_t start_index = line.start + param->m->cursor.column;
     size_t delete_len = line.end - start_index;
@@ -187,8 +175,7 @@ static void line_editor_delete_rest_of_line(
     buffer_delete(param->m->text.buffer, start_index, delete_len);
 }
 
-static void line_editor_delete(
-    struct line_editor_action_param* param) {
+static void line_editor_delete(action_param_t* param) {
     assert(param->m->text.buffer);
 
     if (param->m->line_editor_mode & line_editor_mode_selection) {
@@ -203,7 +190,7 @@ static void line_editor_delete(
     line_editor_delete_char_at(param->m, param->m->cursor.column);
 }
 
-static void line_editor_copy(struct line_editor_action_param* param) {
+static void line_editor_copy(action_param_t* param) {
     assert(param->m->line_editor_mode == line_editor_mode_selection);
     size_t index_begin = param->m->text.selection.from_col;
     size_t index_end = param->m->text.selection.to_col;
@@ -217,8 +204,7 @@ static void line_editor_copy(struct line_editor_action_param* param) {
     SetClipboardText(utf8_selection_str);
 }
 
-static void line_editor_paste(
-    struct line_editor_action_param* param) {
+static void line_editor_paste(action_param_t* param) {
     const char* clipboard_utf8 = GetClipboardText();
     if (!clipboard_utf8) return;
 
@@ -248,15 +234,15 @@ static void line_editor_paste(
     }
 }
 
-static void line_editor_cut(struct line_editor_action_param* param) {
+static void line_editor_cut(action_param_t* param) {
     assert(param->m->line_editor_mode == line_editor_mode_selection);
     line_editor_copy(param);
     line_editor_delete_selection(param);
     line_editor_end_mode_selection(param);
 }
 
-static void line_editor_insert_char(
-    struct line_editor_action_param* param, c32_t chr) {
+static void line_editor_insert_char(action_param_t* param,
+                                    c32_t chr) {
     assert(param->m->text.buffer);
     if (chr == U' ' || chr == U'_' || chr == U'\n' ||
         param->m->line_editor_flags &
@@ -271,8 +257,7 @@ static void line_editor_insert_char(
         ~line_editor_flag_cursor_moved_manually;
 }
 
-static void line_editor_move_word_right(
-    struct line_editor_action_param* param) {
+static void line_editor_move_word_right(action_param_t* param) {
     size_t idx = param->m->cursor.column;
 
     c32_t current_char = param->m->text.buffer->str.data[idx];
@@ -293,8 +278,7 @@ static void line_editor_move_word_right(
         line_editor_flag_cursor_moved_manually;
 }
 
-static void line_editor_move_word_left(
-    struct line_editor_action_param* param) {
+static void line_editor_move_word_left(action_param_t* param) {
     size_t idx = param->m->cursor.column;
 
     if (idx) idx -= 1;
@@ -319,7 +303,7 @@ static void line_editor_move_word_left(
 }
 
 static void (*g_line_editor_cmd_table[line_editor_cmd_count])(
-    struct line_editor_action_param*) = {
+    action_param_t*) = {
     [line_editor_cmd_move_char_left] = line_editor_move_char_left,
     [line_editor_cmd_move_char_right] = line_editor_move_char_right,
     [line_editor_cmd_move_end_of_line] = line_editor_move_end_of_line,
@@ -341,8 +325,7 @@ static void (*g_line_editor_cmd_table[line_editor_cmd_count])(
     [line_editor_cmd_move_word_right] = line_editor_move_word_right,
 };
 
-static void line_editor_handle_mode_normal(
-    struct line_editor_action_param* param) {
+static void line_editor_handle_mode_normal(action_param_t* param) {
     line_editor_move_cursor_on_click(param);
 
     int cmd = key_seq_handler_get_command(
@@ -354,21 +337,20 @@ static void line_editor_handle_mode_normal(
         line_editor_insert_char(param, char_pressed);
 }
 
-static void line_editor_handle_mode_selection(
-    struct line_editor_action_param* param) {
+static void line_editor_handle_mode_selection(action_param_t* param) {
     line_editor_move_cursor_on_click(param);
 
     int command = key_seq_handler_get_command(
         g_cfg.keybinds.line_editor.mode_normal);
     if (command != -1) {
-        void (*action_function)(struct line_editor_action_param*) =
+        void (*action_function)(action_param_t*) =
             g_line_editor_cmd_table[command];
         if (action_function) action_function(param);
     }
 
     if (param->m->line_editor_flags & line_editor_flag_cursor_moved) {
         text_view_select(&param->m->text,
-                         (struct selection){
+                         (selection_t){
                              .from_line = 0,
                              .from_col = param->m->selection_begin,
                              .to_line = 0,
@@ -389,8 +371,7 @@ static void line_editor_handle_mode_selection(
     line_editor_end_mode_selection(param);
 }
 
-void line_editor_handle_user_input(
-    struct line_editor_action_param* param) {
+void line_editor_handle_user_input(action_param_t* param) {
     switch (param->m->line_editor_mode) {
         case line_editor_mode_normal:
             line_editor_handle_mode_normal(param);
@@ -401,11 +382,10 @@ void line_editor_handle_user_input(
     }
 }
 
-void line_editor_draw(struct line_editor* m,
-                      struct ff_typography typo, Rectangle bounds,
-                      int focus_flags) {
+void line_editor_draw(line_editor_t* m, ff_typo_t typo,
+                      Rectangle bounds, int focus_flags) {
     if (focus_flags & focus_flag_can_interact) {
-        struct line_editor_action_param param = {m, typo, bounds};
+        action_param_t param = {m, typo, bounds};
         line_editor_handle_user_input(&param);
     }
 
@@ -418,7 +398,7 @@ void line_editor_draw(struct line_editor* m,
     m->line_editor_flags &= ~line_editor_flag_cursor_moved;
 }
 
-void line_editor_clear(struct line_editor* m) {
+void line_editor_clear(line_editor_t* m) {
     buffer_clear(m->text.buffer);
     m->cursor.row = 0;
     m->cursor.column = 0;

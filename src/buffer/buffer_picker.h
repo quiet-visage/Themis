@@ -1,8 +1,9 @@
 #pragma once
 #include <fieldfusion.h>
 
+#include "buffer.h"
+
 void buffer_picker_init(void);
 void buffer_picker_terminate(void);
 void buffer_picker_update_options(void);
-struct buffer* buffer_picker_ui(struct ff_typography typo,
-                                int focus_flags);
+buffer_t* buffer_picker_ui(ff_typo_t typo, int focus_flags);

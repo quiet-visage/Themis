@@ -2,10 +2,8 @@
 
 #include <assert.h>
 
-void cursor_history_push(struct cursor_history* o,
-                         struct text_position item) {
-    size_t required_capacity =
-        (o->length + 1) * sizeof(struct text_position);
+void cursor_history_push(cursor_history_t* o, text_pos_t item) {
+    size_t required_capacity = (o->length + 1) * sizeof(text_pos_t);
 
     while (required_capacity > o->capacity) {
         o->capacity *= 2;
@@ -17,22 +15,20 @@ void cursor_history_push(struct cursor_history* o,
     o->length += 1;
 }
 
-void cursor_history_pop(struct cursor_history* o) {
+void cursor_history_pop(cursor_history_t* o) {
     assert(o->length);
     o->length -= 1;
 }
 
-void cursor_history_create(struct cursor_history* o) {
-    o->data = calloc(2, sizeof(struct text_position));
+void cursor_history_create(cursor_history_t* o) {
+    o->data = calloc(2, sizeof(text_pos_t));
     o->length = 0;
-    o->capacity = 2 * sizeof(struct text_position);
+    o->capacity = 2 * sizeof(text_pos_t);
 }
 
-void cursor_history_destroy(struct cursor_history* o) {
-    free(o->data);
-}
+void cursor_history_destroy(cursor_history_t* o) { free(o->data); }
 
-struct text_position cursor_history_top(struct cursor_history* o) {
+text_pos_t cursor_history_top(cursor_history_t* o) {
     assert(o->length);
     return o->data[o->length - 1];
 }

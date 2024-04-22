@@ -1,15 +1,16 @@
 #include "sequence_association.h"
+
 #include <assert.h>
 #include <stdlib.h>
 
-struct sequence_association* sequence_association_create(void) {
-    struct sequence_association* result =
-        calloc(1, sizeof(struct sequence_association));
+sequence_association_t* sequence_association_create(void) {
+    sequence_association_t* result =
+        calloc(1, sizeof(sequence_association_t));
     assert(result);
     return result;
 }
 
-void sequence_association_destroy(struct sequence_association* m) {
+void sequence_association_destroy(sequence_association_t* m) {
     for (size_t i = 0; i < SEQUENCE_ASSOCIATION_CHILD_LIMIT; i += 1) {
         if (!m->children[i]) continue;
         sequence_association_destroy(m->children[i]);
@@ -17,8 +18,8 @@ void sequence_association_destroy(struct sequence_association* m) {
     free(m);
 }
 
-void sequence_association_push(struct sequence_association* m,
-                               struct sequence_association* seq) {
+void sequence_association_push(sequence_association_t* m,
+                               sequence_association_t* seq) {
     assert(m->children_count < SEQUENCE_ASSOCIATION_CHILD_LIMIT);
     m->children[m->children_count++] = seq;
 }

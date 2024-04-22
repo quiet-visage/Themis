@@ -1,2 +1,0 @@
-/usr/bin/ar qc libtree_sitter_json.a CMakeFiles/tree_sitter_json.dir/parser.c.o
-/usr/bin/ranlib libtree_sitter_json.a

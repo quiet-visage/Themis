@@ -4,21 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "buffer.h"
 #include "../dyn_strings/utf32_string.h"
 #include "../highlighter/highlighter.h"
-#include "../text_view.h"
+#include "buffer.h"
 #define BUFFER_MAP_SIZE 1024
 
-struct buffer_map_entry {
-    struct buffer buffer;
+typedef struct buffer_map_entry {
+    buffer_t buffer;
     struct buffer_map_entry* next;
-};
+} buffer_map_entry_t;
 
-struct buffer_map {
-    struct buffer_map_entry entries[BUFFER_MAP_SIZE];
+typedef struct {
+    buffer_map_entry_t entries[BUFFER_MAP_SIZE];
     size_t length;
-};
+} buffer_map_t;
 
 static size_t cooked_hash(const char* str, size_t str_len) {
     static const size_t max_len = 26;
@@ -31,29 +30,29 @@ static size_t cooked_hash(const char* str, size_t str_len) {
     return hash;
 }
 
-static void buffer_map_entry_destroy(struct buffer_map_entry* m) {
+static void buffer_map_entry_destroy(buffer_map_entry_t* m) {
     if (m->next) buffer_map_entry_destroy(m->next);
     buffer_destroy(&m->buffer);
-    memset(&m->buffer, 0, sizeof(struct buffer));
+    memset(&m->buffer, 0, sizeof(buffer_t));
     if (m->next) {
         free(m->next);
         m->next = NULL;
     }
 }
 
-static void buffer_map_destroy(struct buffer_map* m) {
+static void buffer_map_destroy(buffer_map_t* m) {
     for (size_t i = 0; i < BUFFER_MAP_SIZE; i += 1) {
         if (m->entries[i].buffer.buffer_name[0])
             buffer_map_entry_destroy(&m->entries[i]);
     }
 }
 
-static struct buffer* buffer_map_get(struct buffer_map* m,
-                                     const char* buffer_name) {
+static buffer_t* buffer_map_get(buffer_map_t* m,
+                                const char* buffer_name) {
     size_t slot = cooked_hash(buffer_name, strlen(buffer_name)) %
                   BUFFER_MAP_SIZE;
 
-    struct buffer_map_entry* entry = &m->entries[slot];
+    buffer_map_entry_t* entry = &m->entries[slot];
     while (entry) {
         if (entry->buffer.buffer_name[0] &&
             !strcmp(entry->buffer.buffer_name, buffer_name))
@@ -64,13 +63,12 @@ static struct buffer* buffer_map_get(struct buffer_map* m,
     return 0;
 }
 
-static void buffer_map_set(struct buffer_map* m,
-                           const char* buffer_name,
-                           struct utf32_str string) {
+static void buffer_map_set(buffer_map_t* m, const char* buffer_name,
+                           utf32_str_t string) {
     size_t slot = cooked_hash(buffer_name, strlen(buffer_name)) %
                   BUFFER_MAP_SIZE;
 
-    struct buffer_map_entry* entry = &m->entries[slot];
+    buffer_map_entry_t* entry = &m->entries[slot];
 
     if (!entry->buffer.buffer_name[0]) {
         buffer_create(&entry->buffer, string);
@@ -92,7 +90,7 @@ static void buffer_map_set(struct buffer_map* m,
         }
     }
 
-    entry->next = calloc(sizeof(struct buffer_map_entry), 1);
+    entry->next = calloc(sizeof(buffer_map_entry_t), 1);
     assert(entry->next);
 
     buffer_create(&entry->next->buffer, string);
@@ -100,26 +98,26 @@ static void buffer_map_set(struct buffer_map* m,
     m->length += 1;
 }
 
-static struct buffer_map g_buffer_map = {0};
+static buffer_map_t g_buffer_map = {0};
 
 void buffer_handler_init(void) {
     buffer_map_set(&g_buffer_map, "[scratch]", utf32_str_create());
-    struct buffer* scratch_buffer =
+    buffer_t* scratch_buffer =
         buffer_map_get(&g_buffer_map, "[scratch]");
-    buffer_save_undo(scratch_buffer, (struct text_position){0});
+    buffer_save_undo(scratch_buffer, (text_pos_t){0});
 };
 
 size_t buffer_count(void) { return g_buffer_map.length; }
 
-struct buffer* buffer_handler_get(const char* name) {
+buffer_t* buffer_handler_get(const char* name) {
     return buffer_map_get(&g_buffer_map, name);
 }
 
-struct buffer* buffer_handler_create_buffer(const char* name) {
+buffer_t* buffer_handler_create_buffer(const char* name) {
     assert(!buffer_handler_get(name));
     buffer_map_set(&g_buffer_map, name, utf32_str_create());
 
-    struct buffer* result = buffer_handler_get(name);
+    buffer_t* result = buffer_handler_get(name);
     assert(result);
     return result;
 }
@@ -131,12 +129,12 @@ void buffer_handler_terminate(void) {
 size_t buffer_handler_count(void) { return g_buffer_map.length; }
 
 void buffer_handler_list_names(size_t count,
-                               struct utf32_str names[count]) {
+                               utf32_str_t names[count]) {
     assert(count <= g_buffer_map.length);
 
     size_t name_idx = 0;
     for (size_t i = 0; i < BUFFER_MAP_SIZE; i += 1) {
-        struct buffer_map_entry* entry = &g_buffer_map.entries[i];
+        buffer_map_entry_t* entry = &g_buffer_map.entries[i];
         if (!entry->buffer.buffer_name[0]) continue;
 
         utf32_str_copy_utf8(&names[name_idx++],

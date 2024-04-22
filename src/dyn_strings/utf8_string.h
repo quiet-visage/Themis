@@ -2,15 +2,14 @@
 
 #include <stddef.h>
 
-struct utf8_str {
+typedef struct {
     char* data;
     size_t capacity;
     size_t length;
-};
+} utf8_str_t;
 
-struct utf8_str utf8_str_create(void);
-void utf8_str_destroy(struct utf8_str* this);
-void utf8_str_copy(struct utf8_str* this, const char* buf,
-                   size_t buf_len);
-struct utf8_str utf8_str_clone(struct utf8_str* str);
-void utf8_str_clear(struct utf8_str* this);
+utf8_str_t utf8_str_create(void);
+void utf8_str_destroy(utf8_str_t* this);
+void utf8_str_copy(utf8_str_t* this, const char* buf, size_t buf_len);
+utf8_str_t utf8_str_clone(utf8_str_t* str);
+void utf8_str_clear(utf8_str_t* this);

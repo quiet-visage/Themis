@@ -4,15 +4,15 @@
 
 typedef unsigned long ulong;
 
-struct text_position {
+typedef struct {
     ulong row;
     ulong column;
-};
+} text_pos_t;
 
-struct token_position {
-    struct text_position start;
-    struct text_position end;
-};
+typedef struct {
+    text_pos_t start;
+    text_pos_t end;
+} token_pos_t;
 
 enum token_kind {
     token_kind_unknown_t = -1,
@@ -49,16 +49,16 @@ enum token_kind {
     token_kind_count_t
 };
 
-struct token {
+typedef struct {
     enum token_kind kind;
-    struct token_position position;
-};
+    token_pos_t position;
+} token_t;
 
-struct tokens {
-    struct token* data;
+typedef struct {
+    token_t* data;
     ulong length;
     ulong capacity;
-};
+} tokens_t;
 
 enum language {
     language_none_t = -1,
@@ -68,20 +68,20 @@ enum language {
     language_count_t
 };
 
-struct highlighter {
+typedef struct {
     TSTree* tree;
     enum language language;
-};
+} highlighter_t;
 
 void hlr_init();
 void hlr_terminate();
-struct highlighter hlr_highlighter_create(enum language lang,
-                                          const char* buffer,
-                                          size_t buffer_size);
-void hlr_highlighter_destroy(struct highlighter* m);
-void hlr_highlighter_update(struct highlighter* m, const char* buffer,
+highlighter_t hlr_highlighter_create(enum language lang,
+                                     const char* buffer,
+                                     size_t buffer_size);
+void hlr_highlighter_destroy(highlighter_t* m);
+void hlr_highlighter_update(highlighter_t* m, const char* buffer,
                             size_t buffer_size);
 enum language hlr_get_extension_language(const char* dot_ext);
-struct tokens hlr_tokens_create();
-void hlr_tokens_destroy(struct tokens* m);
-void hlr_tokens_update(struct highlighter* m, struct tokens* ts);
+tokens_t hlr_tokens_create();
+void hlr_tokens_destroy(tokens_t* m);
+void hlr_tokens_update(highlighter_t* m, tokens_t* ts);

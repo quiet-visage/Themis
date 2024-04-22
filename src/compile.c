@@ -6,26 +6,28 @@
 #include <threads.h>
 
 #include "buffer/buffer.h"
+#include "commands.h"
 #include "dyn_strings/utf32_string.h"
 #include "error_link.h"
 #include "text_view.h"
 
 #define CMD_OUTPUT_CHUNK_CAP 264
 
-struct error_links g_error_links;
-struct text_view g_compile_view = {0};
+error_links_t g_error_links;
+text_view_t g_compile_view = {0};
 char* g_spawn_command[4] = {"/usr/bin/bash", "-c", 0, 0};
 struct subprocess_s g_command_child_process;
 bool g_should_check_child_exit_code = 0;
+size_t g_sel_err_link = 0;
 
 static bool is_digit(int code) { return code >= 48 && code <= 57; }
 
-static void find_gcc_errors(struct error_links* m, const c32_t* str,
+static void find_gcc_errors(error_links_t* m, const c32_t* str,
                             size_t str_len) {
     static const c32_t* err_label = L"error:";
     static const size_t err_label_len = 6;
 
-    struct error_link error_link = {0};
+    error_link_t error_link = {0};
 
     c32_t* match_ptr = 0;
     size_t match_pos = 0;
@@ -103,7 +105,7 @@ void compile_set_cmd(char* str, size_t str_len) {
 
 void compile_init() {
     g_compile_view = text_view_create();
-    g_compile_view.buffer = malloc(sizeof(struct buffer));
+    g_compile_view.buffer = malloc(sizeof(buffer_t));
     buffer_create(g_compile_view.buffer, utf32_str_create());
     error_links_create(&g_error_links);
 }
@@ -135,6 +137,10 @@ static void compile_update() {
             subprocess_join(&g_command_child_process, &return_status);
             append_proccess_finished_msg(return_status);
             g_should_check_child_exit_code = 0;
+
+            find_gcc_errors(&g_error_links,
+                            g_compile_view.buffer->str.data,
+                            g_compile_view.buffer->str.length);
         }
         return;
     }
@@ -148,6 +154,7 @@ static void compile_update() {
 }
 
 void compile_spawn() {
+    error_links_clear(&g_error_links);
     if (subprocess_alive(&g_command_child_process)) compile_kill();
     buffer_clear(g_compile_view.buffer);
 
@@ -164,12 +171,28 @@ void compile_kill() {
     subprocess_terminate(&g_command_child_process);
 }
 
-void compile_draw(struct ff_typography typo, Rectangle bounds,
-                  int focus) {
+void compile_draw(ff_typo_t typo, Rectangle bounds, int focus) {
     compile_update();
-    error_links_clear(&g_error_links);
-    find_gcc_errors(&g_error_links, g_compile_view.buffer->str.data,
-                    g_compile_view.buffer->str.length);
     text_view_draw(&g_compile_view, typo, bounds, focus, 0, 0,
                    g_error_links.data, g_error_links.length);
+}
+
+void compile_jmp_next_err() {
+    if (!g_error_links.length) return;
+    cmd_arg_set(command_group_main, main_cmd_open_file_link,
+                &g_error_links.data[g_sel_err_link].file_link,
+                sizeof(file_link_t));
+
+    if (g_sel_err_link >= g_error_links.length - 1) return;
+    g_sel_err_link += 1;
+}
+
+void compile_jmp_prev_err() {
+    if (!g_error_links.length) return;
+    cmd_arg_set(command_group_main, main_cmd_open_file_link,
+                &g_error_links.data[g_sel_err_link].file_link,
+                sizeof(file_link_t));
+
+    if (!g_sel_err_link) return;
+    g_sel_err_link -= 1;
 }

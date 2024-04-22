@@ -13,15 +13,14 @@
 #include "highlighter/highlighter.h"
 #include "rlgl.h"
 
-void file_editor_destroy(struct file_editor* m) {
+void file_editor_destroy(file_editor_t* m) {
     editor_destroy(&m->editor);
     utf8_str_destroy(&m->status_line_str);
-    ff_glyphs_vector_destroy(&m->status_line_glyphs);
+    ff_glyph_vec_destroy(&m->status_line_glyphs);
     utf8_str_destroy(&m->file_path);
 }
 
-static void file_editor_update_status_line_text(
-    struct file_editor* m) {
+static void file_editor_update_status_line_text(file_editor_t* m) {
     if (m->file_path.length < 32) {
         utf8_str_copy(&m->status_line_str, m->file_path.data,
                       m->file_path.length);
@@ -60,16 +59,16 @@ static void file_editor_update_status_line_text(
 }
 
 static Rectangle file_editor_get_status_line_bounds(
-    struct file_editor* m, struct ff_typography typo,
-    Rectangle bounds) {
+    file_editor_t* m, ff_typo_t typo, Rectangle bounds) {
     Rectangle result = bounds;
     result.height = typo.size + g_cfg.layout.padding * 2;
     return result;
 }
 
-static void file_editor_update_status_line_glyphs(
-    struct file_editor* m, Rectangle bounds,
-    struct ff_typography typo, int focus_flags) {
+static void file_editor_update_status_line_glyphs(file_editor_t* m,
+                                                  Rectangle bounds,
+                                                  ff_typo_t typo,
+                                                  int focus_flags) {
     typo.color = focus_flags & focus_flag_can_interact
                      ? g_cfg.color_scheme.highlight_fg
                      : g_cfg.color_scheme.fg;
@@ -77,9 +76,9 @@ static void file_editor_update_status_line_glyphs(
     Rectangle status_line_bounds =
         file_editor_get_status_line_bounds(m, typo, bounds);
 
-    struct ff_dimensions text_dimensions =
-        ff_measure_utf8(typo.font, m->status_line_str.data,
-                        m->status_line_str.length, typo.size, 0);
+    ff_dimensions_t text_dimensions = ff_measure_utf8(
+        m->status_line_str.data, m->status_line_str.length, typo.font,
+        typo.size, 0);
 
     float text_x = status_line_bounds.x +
                    status_line_bounds.width * .5f -
@@ -88,37 +87,32 @@ static void file_editor_update_status_line_glyphs(
                    status_line_bounds.height * .5f -
                    text_dimensions.height * .5;
 
-    ff_glyphs_vector_clear(&m->status_line_glyphs);
+    ff_glyph_vec_clear(&m->status_line_glyphs);
 
-    struct ff_print print = {
-        .typography = typo,
-        .options = ff_get_default_print_flags(),
-        .characteristics = ff_get_default_characteristics(),
-    };
-
-    ff_print_utf8(&m->status_line_glyphs, m->status_line_str.data,
-                  m->status_line_str.length, print, text_x, text_y);
+    ff_print_utf8_vec(&m->status_line_glyphs, m->status_line_str.data,
+                      m->status_line_str.length, typo, text_x, text_y,
+                      ff_flag_default, 0);
 }
 
-void file_editor_create(struct file_editor* m) {
-    memset(m, 0, sizeof(struct file_editor));
+void file_editor_create(file_editor_t* m) {
+    memset(m, 0, sizeof(file_editor_t));
     m->file_path = utf8_str_create();
     editor_create(&m->editor);
     m->status_line_str = utf8_str_create();
-    m->status_line_glyphs = ff_glyphs_vector_create();
+    m->status_line_glyphs = ff_glyph_vec_create();
     file_editor_set_path(m, "[scratch]");
 }
 
-void file_editor_open(struct file_editor* m, const char* file_path) {
+void file_editor_open(file_editor_t* m, const char* file_path) {
     assert(IsPathFile(file_path));
 
-    struct buffer* stored_buffer = buffer_handler_get(file_path);
+    buffer_t* stored_buffer = buffer_handler_get(file_path);
     utf8_str_copy(&m->file_path, file_path, strlen(file_path));
     editor_reset_mode(&m->editor);
     if (stored_buffer) {
         m->editor.text.buffer = stored_buffer;
     } else {
-        struct buffer* new_buffer =
+        buffer_t* new_buffer =
             buffer_handler_create_buffer(file_path);
 
         m->editor.text.buffer = new_buffer;
@@ -135,11 +129,10 @@ void file_editor_open(struct file_editor* m, const char* file_path) {
     }
 
     file_editor_update_status_line_text(m);
-    buffer_save_undo(m->editor.text.buffer,
-                     (struct text_position){0});
+    buffer_save_undo(m->editor.text.buffer, (text_pos_t){0});
 }
 
-void file_editor_save(struct file_editor* m) {
+void file_editor_save(file_editor_t* m) {
     if (!m->file_path.length) return;
     FILE* file = fopen(m->file_path.data, "w");
     assert(file != NULL);
@@ -153,13 +146,12 @@ void file_editor_save(struct file_editor* m) {
     fclose(file);
 }
 
-void file_editor_set_path(struct file_editor* o, const char* path) {
+void file_editor_set_path(file_editor_t* o, const char* path) {
     utf8_str_copy(&o->file_path, path, strlen(path));
     file_editor_update_status_line_text(o);
 }
 
-void file_editor_draw_status_line(struct file_editor* m,
-                                  struct ff_typography typo,
+void file_editor_draw_status_line(file_editor_t* m, ff_typo_t typo,
                                   Rectangle bounds, int focus_flags) {
     file_editor_update_status_line_glyphs(m, bounds, typo,
                                           focus_flags);
@@ -174,7 +166,7 @@ void file_editor_draw_status_line(struct file_editor* m,
     ff_get_ortho_projection(0, GetScreenWidth(), GetScreenHeight(), 0,
                             -1.0f, 1.0f, projection);
     ff_draw(typo.font, m->status_line_glyphs.data,
-            m->status_line_glyphs.size, (float*)projection);
+            m->status_line_glyphs.len, (float*)projection);
 }
 
 void file_editor_draw_fade(Rectangle editor_bounds) {
@@ -193,17 +185,15 @@ void file_editor_draw_fade(Rectangle editor_bounds) {
         fade_out_bounds.height, transparent_bg, bg);
 }
 
-void file_editor_handle_commands(struct file_editor* m,
-                                 int focus_flags) {
+void file_editor_handle_commands(file_editor_t* m, int focus_flags) {
     if (!(focus_flags & focus_flag_can_interact)) return;
 
     int cmd = key_seq_handler_get_command(g_cfg.keybinds.file_editor);
     if (cmd != -1 && cmd == file_editor_cmd_save) file_editor_save(m);
 }
 
-void file_editor_draw(struct file_editor* m,
-                      struct ff_typography typo, Rectangle bounds,
-                      int focus_flags) {
+void file_editor_draw(file_editor_t* m, ff_typo_t typo,
+                      Rectangle bounds, int focus_flags) {
     file_editor_handle_commands(m, focus_flags);
 
     if (m->file_path.length != m->status_line_str.length)

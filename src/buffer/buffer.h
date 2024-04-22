@@ -8,35 +8,31 @@
 
 #define BUFFER_NAME_CAP 0x100
 
-struct buffer {
+typedef struct {
     char buffer_name[BUFFER_NAME_CAP];
-    struct utf32_str str;
-    struct buffer_history undo_history;
-    struct buffer_history redo_history;
-    struct buffer_lines lines;
-    struct buffer_syntax syntax;
+    utf32_str_t str;
+    buffer_history_t undo_history;
+    buffer_history_t redo_history;
+    buffer_lines_t lines;
+    buffer_syntax_t syntax;
     size_t str_last_checked_size;
-};
+} buffer_t;
 
-void buffer_create(struct buffer* m, struct utf32_str data);
-void buffer_destroy(struct buffer* m);
-void buffer_clear(struct buffer* m);
-void buffer_set_name(struct buffer* m, const char* name);
-void buffer_save_undo(struct buffer* m, struct text_position cursor);
-struct text_position buffer_undo(struct buffer* m,
-                                 struct text_position cursor);
-struct text_position buffer_redo(struct buffer* m,
-                                 struct text_position cursor);
-void buffer_insert_char(struct buffer* m, const size_t pos,
+void buffer_create(buffer_t* m, utf32_str_t data);
+void buffer_destroy(buffer_t* m);
+void buffer_clear(buffer_t* m);
+void buffer_set_name(buffer_t* m, const char* name);
+void buffer_save_undo(buffer_t* m, text_pos_t cursor);
+text_pos_t buffer_undo(buffer_t* m, text_pos_t cursor);
+text_pos_t buffer_redo(buffer_t* m, text_pos_t cursor);
+void buffer_insert_char(buffer_t* m, const size_t pos,
                         const c32_t chr);
-void buffer_insert_utf8_buf(struct buffer* m, size_t pos, char* str,
+void buffer_insert_utf8_buf(buffer_t* m, size_t pos, char* str,
                             size_t len);
-void buffer_insert_buf(struct buffer* m, size_t pos, c32_t* str,
+void buffer_insert_buf(buffer_t* m, size_t pos, c32_t* str,
                        size_t len);
-void buffer_delete(struct buffer* m, size_t pos, size_t count);
-void buffer_copy(struct buffer* m, c32_t* buffer, size_t len);
-void buffer_copy_utf8(struct buffer* m, const char* buffer,
-                      size_t len);
-void buffer_append_utf8(struct buffer* m, const char* buffer,
-                        size_t len);
-void buffer_read_file(struct buffer* m, const char* path);
+void buffer_delete(buffer_t* m, size_t pos, size_t count);
+void buffer_copy(buffer_t* m, c32_t* buffer, size_t len);
+void buffer_copy_utf8(buffer_t* m, const char* buffer, size_t len);
+void buffer_append_utf8(buffer_t* m, const char* buffer, size_t len);
+void buffer_read_file(buffer_t* m, const char* path);

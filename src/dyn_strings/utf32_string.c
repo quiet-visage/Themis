@@ -8,22 +8,22 @@
 #include <string.h>
 #include <threads.h>
 
-struct utf32_str utf32_str_create(void) {
-    struct utf32_str result = {.data = calloc(sizeof(c32_t), 2),
-                               .length = 0,
-                               .capacity = sizeof(c32_t) * 2};
+utf32_str_t utf32_str_create(void) {
+    utf32_str_t result = {.data = calloc(sizeof(c32_t), 2),
+                          .length = 0,
+                          .capacity = sizeof(c32_t) * 2};
     return result;
 }
 
-struct utf32_str utf32_str_clone(struct utf32_str* str32) {
-    struct utf32_str result = {.data = malloc(str32->capacity),
-                               .capacity = str32->capacity,
-                               .length = str32->length};
+utf32_str_t utf32_str_clone(utf32_str_t* str32) {
+    utf32_str_t result = {.data = malloc(str32->capacity),
+                          .capacity = str32->capacity,
+                          .length = str32->length};
     memcpy(result.data, str32->data, str32->capacity);
     return result;
 }
 
-void utf32_str_copy_utf8(struct utf32_str* s, const char* buffer,
+void utf32_str_copy_utf8(utf32_str_t* s, const char* buffer,
                          size_t len) {
     size_t required_capacity = sizeof(c32_t) * len;
     size_t previous_capacity = s->capacity;
@@ -47,7 +47,7 @@ void utf32_str_copy_utf8(struct utf32_str* s, const char* buffer,
     }
 }
 
-void utf32_str_append_utf8(struct utf32_str* m, const char* buffer,
+void utf32_str_append_utf8(utf32_str_t* m, const char* buffer,
                            size_t len) {
     size_t required_capacity =
         m->length * sizeof(c32_t) + len * sizeof(c32_t);
@@ -73,7 +73,7 @@ void utf32_str_append_utf8(struct utf32_str* m, const char* buffer,
     }
 }
 
-void utf32_str_read_file(struct utf32_str* s, const char* path) {
+void utf32_str_read_file(utf32_str_t* s, const char* path) {
     magic_t m = magic_open(MAGIC_MIME);
     if (!m) printf("init fail\n");
     int d = magic_load(m, 0);
@@ -103,19 +103,14 @@ void utf32_str_read_file(struct utf32_str* s, const char* path) {
     free(file_contents);
 }
 
-struct read_file_args {
-    struct utf32_str* m;
-    const char* path;
-};
-
-void utf32_str_destroy(struct utf32_str* s) {
+void utf32_str_destroy(utf32_str_t* s) {
     free(s->data);
     s->data = 0;
     s->length = 0;
     s->capacity = 0;
 }
 
-void utf32_str_copy(struct utf32_str* s, c32_t* buffer, size_t len) {
+void utf32_str_copy(utf32_str_t* s, c32_t* buffer, size_t len) {
     size_t required_capacity = sizeof(c32_t) * len;
 
     while (required_capacity > s->capacity) {
@@ -128,8 +123,7 @@ void utf32_str_copy(struct utf32_str* s, c32_t* buffer, size_t len) {
     s->length = len;
 }
 
-void utf32_str_delete(struct utf32_str* this, size_t pos,
-                      size_t count) {
+void utf32_str_delete(utf32_str_t* this, size_t pos, size_t count) {
     if (!count || !this->length) return;
     assert(pos + count <= this->length);
 
@@ -138,8 +132,8 @@ void utf32_str_delete(struct utf32_str* this, size_t pos,
     this->length -= count;
 }
 
-void utf32_str_insert_buf(struct utf32_str* this, size_t pos,
-                          c32_t* str, size_t len) {
+void utf32_str_insert_buf(utf32_str_t* this, size_t pos, c32_t* str,
+                          size_t len) {
     assert(pos <= this->length);
     size_t required_capacity = (this->length + len) * sizeof(c32_t);
 
@@ -155,9 +149,9 @@ void utf32_str_insert_buf(struct utf32_str* this, size_t pos,
     this->length += len;
 }
 
-void utf32_str_clear(struct utf32_str* this) { this->length = 0; }
+void utf32_str_clear(utf32_str_t* this) { this->length = 0; }
 
-void utf32_str_insert_utf8_buf(struct utf32_str* s, size_t pos,
+void utf32_str_insert_utf8_buf(utf32_str_t* s, size_t pos,
                                const char* str, const size_t len) {
     c32_t utf32_str[len];
     int failed = ff_utf8_to_utf32(utf32_str, str, len);
@@ -166,8 +160,7 @@ void utf32_str_insert_utf8_buf(struct utf32_str* s, size_t pos,
     utf32_str_insert_buf(s, pos, utf32_str, len);
 }
 
-void utf32_str_insert_char(struct utf32_str* s, size_t pos,
-                           c32_t chr) {
+void utf32_str_insert_char(utf32_str_t* s, size_t pos, c32_t chr) {
     utf32_str_insert_buf(s, pos, &chr, 1);
 }
 

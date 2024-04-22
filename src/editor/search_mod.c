@@ -7,17 +7,16 @@
 #include "fieldfusion.h"
 #include "line_editor.h"
 
-static void search_matches_create(struct search_matches* m) {
-    memset(m, 0, sizeof(struct search_matches));
-    m->capactiy = sizeof(struct search_matches) * 2;
+static void search_matches_create(search_matches_t* m) {
+    memset(m, 0, sizeof(search_matches_t));
+    m->capactiy = sizeof(search_matches_t) * 2;
     m->data = malloc(m->capactiy);
     assert(m->data);
 }
 
-static void search_matches_push(struct search_matches* m,
-                                struct selection item) {
-    size_t required_capacity =
-        (m->length + 1) * sizeof(struct selection);
+static void search_matches_push(search_matches_t* m,
+                                selection_t item) {
+    size_t required_capacity = (m->length + 1) * sizeof(selection_t);
 
     while (required_capacity > m->capactiy) {
         m->capactiy *= 2;
@@ -29,15 +28,15 @@ static void search_matches_push(struct search_matches* m,
     m->length += 1;
 }
 
-static void search_matches_destroy(struct search_matches* m) {
+static void search_matches_destroy(search_matches_t* m) {
     free(m->data);
 }
 
-static void search_matches_clear(struct search_matches* m) {
+static void search_matches_clear(search_matches_t* m) {
     m->length = 0;
 }
 
-void search_mod_find(struct search_mod* m, struct buffer* buffer) {
+void search_mod_find(search_mod_t* m, buffer_t* buffer) {
     search_matches_clear(&m->search_matches);
 
     bool search_buffer_empty =
@@ -60,7 +59,7 @@ void search_mod_find(struct search_mod* m, struct buffer* buffer) {
 
         search_matches_push(
             &m->search_matches,
-            (struct selection){
+            (selection_t){
                 .from_line = match_line_num,
                 .from_col = match_column,
                 .to_line = match_line_num,
@@ -77,22 +76,22 @@ void search_mod_find(struct search_mod* m, struct buffer* buffer) {
         m->search_editor.text.buffer->str.length;
 }
 
-void search_mod_create(struct search_mod* m) {
-    memset(m, 0, sizeof(struct search_mod));
+void search_mod_create(search_mod_t* m) {
+    memset(m, 0, sizeof(search_mod_t));
     search_matches_create(&m->search_matches);
     line_editor_create(&m->search_editor);
-    m->search_editor.text.buffer = malloc(sizeof(struct buffer));
+    m->search_editor.text.buffer = malloc(sizeof(buffer_t));
     buffer_create(m->search_editor.text.buffer, utf32_str_create());
 }
 
-void search_mod_destroy(struct search_mod* m) {
+void search_mod_destroy(search_mod_t* m) {
     search_matches_destroy(&m->search_matches);
     line_editor_destroy(&m->search_editor);
     buffer_destroy(m->search_editor.text.buffer);
     free(m->search_editor.text.buffer);
 }
 
-void search_mod_select_next(struct search_mod* m) {
+void search_mod_select_next(search_mod_t* m) {
     if (!m->search_matches.length) return;
 
     m->selected_match_idx += 1;
@@ -100,7 +99,7 @@ void search_mod_select_next(struct search_mod* m) {
         m->selected_match_idx = 0;
 }
 
-void search_mod_select_prev(struct search_mod* m) {
+void search_mod_select_prev(search_mod_t* m) {
     if (!m->search_matches.length) return;
 
     if (!m->selected_match_idx) {
@@ -110,31 +109,30 @@ void search_mod_select_prev(struct search_mod* m) {
     }
 }
 
-void search_mod_select_first(struct search_mod* m) {
+void search_mod_select_first(search_mod_t* m) {
     m->selected_match_idx = 0;
 }
 
-void search_mod_clear_matches(struct search_mod* m) {
+void search_mod_clear_matches(search_mod_t* m) {
     search_matches_clear(&m->search_matches);
     m->selected_match_idx = 0;
 }
 
-bool search_mod_input_changed(struct search_mod* m) {
+bool search_mod_input_changed(search_mod_t* m) {
     return m->prev_search_buffer_size !=
            m->search_editor.text.buffer->str.length;
 }
 
-bool search_mod_is_empty(struct search_mod* m) {
+bool search_mod_is_empty(search_mod_t* m) {
     return !m->search_matches.length;
 }
 
-struct selection* search_mod_get_selected_match(
-    struct search_mod* m) {
+selection_t* search_mod_get_selected_match(search_mod_t* m) {
     if (m->selected_match_idx >= m->search_matches.length) return 0;
     return &m->search_matches.data[m->selected_match_idx];
 }
 
-void search_mod_draw(struct search_mod* m, struct ff_typography typo,
+void search_mod_draw(search_mod_t* m, ff_typo_t typo,
                      Rectangle outer_bounds, int focus_flags) {
     Texture search_icon = get_icon(icon_search_t);
 

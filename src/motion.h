@@ -1,6 +1,6 @@
 #pragma once
 
-struct motion {
+typedef struct {
     float f;
     float z;
     float r;
@@ -8,8 +8,7 @@ struct motion {
     float velocity[2];
     float previous_input[2];
     float critical_threshold;
-};
+} motion_t;
 
-struct motion motion_new();
-void motion_update(struct motion* m, float target[2],
-                   float delta_time);
+motion_t motion_new();
+void motion_update(motion_t* m, float target[2], float delta_time);

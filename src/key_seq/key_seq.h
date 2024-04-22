@@ -23,6 +23,5 @@ seq_group_id_t key_seq_handler_create_group(void);
 int key_seq_handler_get_command(seq_group_id_t seq_group_id);
 void key_seq_handler_register_association(
     seq_group_id_t seq_group_id, size_t sequence_len,
-    struct key_combination sequence[sequence_len],
-    int associated_command);
+    key_combination_t sequence[sequence_len], int associated_command);
 bool key_seq_handler_key_seq_active(void);

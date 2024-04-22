@@ -10,31 +10,27 @@ enum editor_flags {
     editor_flag_cursor_moved_manually = (1 << 1),
 };
 
-struct editor_search_highlights {
-    struct selection* highlights;
-    size_t length;
-    size_t capactiy;
-};
-
 enum editor_mode {
     editor_mode_normal,
     editor_mode_selection,
     editor_mode_search,
 };
 
-struct editor {
-    struct text_position cursor;
-    struct text_view text;
+typedef struct {
+    text_pos_t cursor;
+    text_view_t text;
     int editor_flags;
     enum editor_mode editor_mode;
-    struct text_position selection_begin;
-    struct search_mod search_mod;
-};
+    text_pos_t selection_begin;
+    search_mod_t search_mod;
+    size_t target_col;
+} editor_t;
 
-void editor_create(struct editor* m);
-void editor_destroy(struct editor* m);
-void editor_save_undo(struct editor* m);
-void editor_draw(struct editor* m, struct ff_typography typo,
-                 Rectangle bounds, int focus_flags);
-void editor_reset_mode(struct editor* m);
-void editor_clear(struct editor* m);
+void editor_create(editor_t* m);
+void editor_destroy(editor_t* m);
+void editor_save_undo(editor_t* m);
+void editor_draw(editor_t* m, ff_typo_t typo, Rectangle bounds,
+                 int focus_flags);
+void editor_reset_mode(editor_t* m);
+void editor_move_cursor(editor_t* m, size_t row, size_t col);
+void editor_clear(editor_t* m);

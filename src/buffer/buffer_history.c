@@ -6,23 +6,23 @@
 #include "../dyn_strings/utf32_string.h"
 #include "../highlighter/highlighter.h"
 
-struct buffer_history buffer_history_create() {
-    return (struct buffer_history){
-        .data = calloc(2, sizeof(struct buffer_history_item)),
+buffer_history_t buffer_history_create() {
+    return (buffer_history_t){
+        .data = calloc(2, sizeof(buffer_history_item_t)),
         .length = 0,
-        .capacity = 2 * sizeof(struct buffer_history_item)};
+        .capacity = 2 * sizeof(buffer_history_item_t)};
 }
 
-void buffer_history_destroy(struct buffer_history* m) {
+void buffer_history_destroy(buffer_history_t* m) {
     while (m->length) buffer_history_pop(m);
     free(m->data);
 }
 
-void buffer_history_copy_and_push(struct buffer_history* m,
-                                  struct utf32_str* str,
-                                  struct text_position cursor) {
+void buffer_history_copy_and_push(buffer_history_t* m,
+                                  utf32_str_t* str,
+                                  text_pos_t cursor) {
     size_t required_capacity =
-        (m->length + 1) * sizeof(struct buffer_history_item);
+        (m->length + 1) * sizeof(buffer_history_item_t);
 
     while (required_capacity > m->capacity) {
         m->capacity *= 2;
@@ -35,18 +35,17 @@ void buffer_history_copy_and_push(struct buffer_history* m,
     m->length += 1;
 }
 
-void buffer_history_pop(struct buffer_history* m) {
+void buffer_history_pop(buffer_history_t* m) {
     assert(m->length > 0);
     m->length -= 1;
     utf32_str_destroy(&m->data[m->length].str);
 }
 
-void buffer_history_clear(struct buffer_history* m) {
+void buffer_history_clear(buffer_history_t* m) {
     while (m->length > 0) buffer_history_pop(m);
 }
 
-struct buffer_history_item* buffer_history_top(
-    struct buffer_history* m) {
+buffer_history_item_t* buffer_history_top(buffer_history_t* m) {
     assert(m->length > 0);
     return &m->data[m->length - 1];
 }

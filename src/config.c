@@ -19,13 +19,13 @@ static const int text = 0xcdd6f4ff;
 static const int overlay2 = 0x9399b2ff;
 static const int overlay0 = 0x6c7086ff;
 
-struct config g_cfg = {
-    .layout = (struct layout){.text_spacing = 6.0f,
-                              .padding = 8.0f,
-                              .gap = 6.0f,
-                              .search_box_width = 256},
+config_t g_cfg = {
+    .layout = (layout_t){.text_spacing = 6.0f,
+                         .padding = 8.0f,
+                         .gap = 6.0f,
+                         .search_box_width = 256},
     .color_scheme =
-        (struct color_scheme){
+        (color_scheme_t){
             .bg = 0x1e1e2eff,
             .fg = text,
             .text_mute = 0x7f849cff,
@@ -68,15 +68,14 @@ struct config g_cfg = {
     .scroll_off = 10};
 
 #define KEY_SEQ(MOD, KEY) \
-    (struct key_combination) { .mod_combo = MOD, .key = KEY }
+    (key_combination_t) { .mod_combo = MOD, .key = KEY }
 
-#define REGISTER_KEYBIND(GROUP, COMMAND, ...)                     \
-    do {                                                          \
-        struct key_combination combination[] = {__VA_ARGS__};     \
-        key_seq_handler_register_association(                     \
-            GROUP,                                                \
-            sizeof(combination) / sizeof(struct key_combination), \
-            combination, COMMAND);                                \
+#define REGISTER_KEYBIND(GROUP, COMMAND, ...)                       \
+    do {                                                            \
+        key_combination_t combination[] = {__VA_ARGS__};            \
+        key_seq_handler_register_association(                       \
+            GROUP, sizeof(combination) / sizeof(key_combination_t), \
+            combination, COMMAND);                                  \
     } while (0)
 
 static void init_editor_keybinds() {
@@ -182,6 +181,9 @@ static void init_main_keybinds() {
     REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_close,              KEY_SEQ(0, KEY_ESCAPE));
     REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_compile,            KEY_SEQ(mod_key_ctrl, KEY_C), KEY_SEQ(0, KEY_C));
     REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_compile_close,      KEY_SEQ(mod_key_ctrl, KEY_C), KEY_SEQ(0, KEY_X));
+    REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_compile_goto_next_error, KEY_SEQ(mod_key_ctrl, KEY_C), KEY_SEQ(0, KEY_N));
+    REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_compile_goto_prev_error, KEY_SEQ(mod_key_ctrl, KEY_C), KEY_SEQ(0, KEY_P));
+    REGISTER_KEYBIND(g_cfg.keybinds.main, main_cmd_open_set_cmd_prompt, KEY_SEQ(mod_key_ctrl, KEY_C), KEY_SEQ(0, KEY_S));
 }
 
 static void init_menu_keybinds() {
@@ -222,6 +224,6 @@ void config_init(void) {
     init_file_picker_keybinds();
     init_file_editor_keybinds();
 
-    g_cfg.typo = (struct ff_typography){
-        .font = 0, .size = 14.f, .color = 0xffffffff};
+    g_cfg.typo =
+        (ff_typo_t){.font = 0, .size = 14.f, .color = 0xffffffff};
 }

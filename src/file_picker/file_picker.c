@@ -18,7 +18,7 @@ static size_t c32_str_len(const c32_t* str) {
     return result;
 }
 
-static void file_picker_reload_options(struct file_picker* fp) {
+static void file_picker_reload_options(file_picker_t* fp) {
     FilePathList files = LoadDirectoryFiles(fp->dir);
     if (files.paths == NULL) return;
     fuzzy_menu_reset(&fp->menu);
@@ -49,8 +49,8 @@ static void file_picker_reload_options(struct file_picker* fp) {
     UnloadDirectoryFiles(files);
 }
 
-struct file_picker file_picker_create() {
-    struct file_picker result = {0};
+file_picker_t file_picker_create() {
+    file_picker_t result = {0};
     fuzzy_menu_create(&result.menu);
 
     const char* cwd = GetWorkingDirectory();
@@ -62,7 +62,7 @@ struct file_picker file_picker_create() {
     return result;
 }
 
-static void file_picker_up_dir(struct file_picker* fp) {
+static void file_picker_up_dir(file_picker_t* fp) {
     size_t last_slash_i = 0;
     size_t current_dir_path_len = strlen(fp->dir);
     for (size_t i = 0; i < current_dir_path_len; i += 1)
@@ -72,8 +72,8 @@ static void file_picker_up_dir(struct file_picker* fp) {
     file_picker_reload_options(fp);
 }
 
-struct file_picker_dimensions {
-    struct fuzzy_menu_dimensions fz_menu_dimensions;
+typedef struct {
+    fuzzy_menu_dimensions_t fz_menu_dimensions;
 
     float file_preview_bg_x;
     float file_preview_bounds_x;
@@ -86,16 +86,16 @@ struct file_picker_dimensions {
 
     float file_preview_bg_height;
     float file_preview_bounds_height;
-};
+} file_picker_dimensions_t;
 
 #define FILE_PICKER_FILE_PREVIEW_HEIGHT_PERC 0.9f
 #define FILE_PICKER_FILE_PREVIEW_WIDTH_PERC 0.75f
 
-struct file_picker_dimensions file_picker_get_dimensions(
-    struct file_picker* fp, struct ff_typography typo) {
+file_picker_dimensions_t file_picker_get_dimensions(file_picker_t* fp,
+                                                    ff_typo_t typo) {
     const Vector2 window_size = {.x = GetScreenWidth(),
                                  .y = GetScreenHeight()};
-    struct file_picker_dimensions result = {0};
+    file_picker_dimensions_t result = {0};
     result.fz_menu_dimensions =
         fuzzy_menu_get_dimensions(&fp->menu, typo, window_size);
 
@@ -152,8 +152,8 @@ struct file_picker_dimensions file_picker_get_dimensions(
 }
 
 static void file_picker_draw_preview(
-    struct file_picker* fp, struct ff_typography typo,
-    struct file_picker_dimensions dimensions, int focus_flags) {
+    file_picker_t* fp, ff_typo_t typo,
+    file_picker_dimensions_t dimensions, int focus_flags) {
     const c32_t* selected = fp->menu.options[fp->menu.selected].name;
 
     size_t selected_len =
@@ -183,8 +183,7 @@ static void file_picker_draw_preview(
     DrawRectangleRec(file_preview_bg,
                      GetColor(g_cfg.color_scheme.surface1_bg));
     if (IsPathFile(selected_file_path)) {
-        struct file_preview* preview =
-            get_preview(selected_file_path);
+        file_preview_t* preview = get_preview(selected_file_path);
         if (!preview) return;
 
         Rectangle file_preview_bounds = {
@@ -202,10 +201,9 @@ static void file_picker_draw_preview(
     }
 }
 
-const char* file_picker_ui(struct file_picker* fp,
-                                struct ff_typography typo,
-                                int focus_flags) {
-    struct file_picker_dimensions dimensions =
+const char* file_picker_ui(file_picker_t* fp, ff_typo_t typo,
+                           int focus_flags) {
+    file_picker_dimensions_t dimensions =
         file_picker_get_dimensions(fp, typo);
     fuzzy_menu_draw_editor(&fp->menu, typo, focus_flags,
                            dimensions.fz_menu_dimensions);
@@ -260,6 +258,6 @@ const char* file_picker_ui(struct file_picker* fp,
     return NULL;
 }
 
-void file_picker_destroy(struct file_picker* fp) {
+void file_picker_destroy(file_picker_t* fp) {
     fuzzy_menu_destroy(&fp->menu);
 }

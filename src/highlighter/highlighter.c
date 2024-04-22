@@ -27,8 +27,8 @@ static TSLanguage *g_languages[language_count_t] = {0};
 static query_source_t g_querie_sources[language_count_t] = {0};
 static TSQuery *g_queries[language_count_t] = {0};
 static TSParser *g_parser = {0};
-static struct serialization_map g_token_map = {0};
-static struct serialization_map g_extension_map = {0};
+static serialization_map_t g_token_map = {0};
+static serialization_map_t g_extension_map = {0};
 
 static void load_query(enum language lang) {
     TSQueryError error;
@@ -103,53 +103,50 @@ void hlr_terminate() {
     serialization_map_destroy(&g_extension_map);
 }
 
-struct tokens hlr_tokens_create() {
-    struct tokens tokens = {
-        .data = (struct token *)calloc(2, sizeof(struct token)),
+tokens_t hlr_tokens_create() {
+    tokens_t tokens = {
+        .data = (token_t *)calloc(2, sizeof(token_t)),
         .length = 0,
-        .capacity = sizeof(struct token) * 2,
+        .capacity = sizeof(token_t) * 2,
     };
     return tokens;
 }
 
-static void hlr_tokens_reset(struct tokens *tokens) {
-    tokens->length = 0;
-}
+static void hlr_tokens_reset(tokens_t *tokens) { tokens->length = 0; }
 
-static void tokens_push(struct tokens *o, struct token token) {
-    ulong new_size = sizeof(struct token) * (o->length + 1);
+static void tokens_push(tokens_t *o, token_t token) {
+    ulong new_size = sizeof(token_t) * (o->length + 1);
 
     if (new_size > o->capacity) {
         o->capacity *= 2;
-        o->data = (struct token *)realloc(o->data, o->capacity);
+        o->data = (token_t *)realloc(o->data, o->capacity);
         assert(o->data != NULL);
     }
 
     o->data[o->length++] = token;
 };
 
-struct highlighter hlr_highlighter_create(enum language lang,
-                                          const char *buffer,
-                                          size_t buffer_size) {
+highlighter_t hlr_highlighter_create(enum language lang,
+                                     const char *buffer,
+                                     size_t buffer_size) {
     if (buffer_size == 0)
-        return (struct highlighter){.tree = 0, .language = lang};
+        return (highlighter_t){.tree = 0, .language = lang};
     ts_parser_set_language(g_parser, g_languages[lang]);
-    return (struct highlighter){
-        .tree = ts_parser_parse_string(g_parser, NULL, buffer,
-                                       buffer_size),
-        .language = lang};
+    return (highlighter_t){.tree = ts_parser_parse_string(
+                               g_parser, NULL, buffer, buffer_size),
+                           .language = lang};
 }
 
-void hlr_highlighter_destroy(struct highlighter *m) {
+void hlr_highlighter_destroy(highlighter_t *m) {
     ts_tree_delete(m->tree);
 }
 
-void hlr_highlighter_update(struct highlighter *m,
-                            const char *buffer, size_t buffer_size) {
+void hlr_highlighter_update(highlighter_t *m, const char *buffer,
+                            size_t buffer_size) {
     ts_parser_set_language(g_parser, g_languages[m->language]);
     if (!m->tree) {
         m->tree = ts_parser_parse_string(g_parser, NULL, buffer,
-                                           buffer_size);
+                                         buffer_size);
     } else {
         TSTree *tmp = ts_parser_parse_string(g_parser, NULL, buffer,
                                              buffer_size);
@@ -158,7 +155,7 @@ void hlr_highlighter_update(struct highlighter *m,
     }
 }
 
-void hlr_tokens_update(struct highlighter *m, struct tokens *ts) {
+void hlr_tokens_update(highlighter_t *m, tokens_t *ts) {
     assert(m->language != language_none_t);
     assert(m->tree != NULL);
     hlr_tokens_reset(ts);
@@ -177,7 +174,7 @@ void hlr_tokens_update(struct highlighter *m, struct tokens *ts) {
             g_queries[m->language], match.captures->index,
             &name_length);
 
-        struct token token = {
+        token_t token = {
             .kind = serialization_map_get(&g_token_map, name,
                                           name_length),
             .position = {
@@ -194,7 +191,7 @@ enum language hlr_get_extension_language(const char *dot_ext) {
                                  strlen(dot_ext));
 }
 
-void hlr_tokens_destroy(struct tokens *m) {
+void hlr_tokens_destroy(tokens_t *m) {
     free(m->data);
     m->data = 0;
     m->length = 0;

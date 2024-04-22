@@ -17,20 +17,20 @@ static size_t cooked_hash(const char* str, size_t str_len) {
     return hash;
 }
 
-struct serialization_map_entry* serialization_map_ll_tail(
-    struct serialization_map_entry* o) {
+serialization_map_entry_t* serialization_map_ll_tail(
+    serialization_map_entry_t* o) {
     assert(o != NULL);
-    struct serialization_map_entry* result = o;
+    serialization_map_entry_t* result = o;
     while (result->next) result = result->next;
     return result;
 }
 
-void serialization_map_set(struct serialization_map* o,
-                           const char* key, int value) {
+void serialization_map_set(serialization_map_t* o, const char* key,
+                           int value) {
     size_t slot =
         cooked_hash(key, strlen(key)) % SERIALIZATION_MAP_SIZE;
 
-    struct serialization_map_entry* entry = &o->entries[slot];
+    serialization_map_entry_t* entry = &o->entries[slot];
 
     if (entry->pair.key == NULL) {
         entry->pair.key = key;
@@ -50,17 +50,17 @@ void serialization_map_set(struct serialization_map* o,
         }
     }
 
-    entry->next = calloc(sizeof(struct serialization_map_entry), 1);
+    entry->next = calloc(sizeof(serialization_map_entry_t), 1);
     assert(entry->next);
     entry->next->pair.key = key;
     entry->next->pair.value = value;
 }
 
-int serialization_map_get(struct serialization_map* o,
-                          const char* key, size_t key_len) {
+int serialization_map_get(serialization_map_t* o, const char* key,
+                          size_t key_len) {
     size_t slot = cooked_hash(key, key_len) % SERIALIZATION_MAP_SIZE;
 
-    struct serialization_map_entry* entry = &o->entries[slot];
+    serialization_map_entry_t* entry = &o->entries[slot];
     while (entry) {
         if (entry->pair.key && strcmp(entry->pair.key, key) == 0)
             return entry->pair.value;
@@ -70,9 +70,9 @@ int serialization_map_get(struct serialization_map* o,
     return -1;
 }
 
-struct serialization_map serialization_map_create(void) {
-    struct serialization_map result = {
-        .entries = calloc(sizeof(struct serialization_map_entry),
+serialization_map_t serialization_map_create(void) {
+    serialization_map_t result = {
+        .entries = calloc(sizeof(serialization_map_entry_t),
                           SERIALIZATION_MAP_SIZE)};
     assert(result.entries);
 
@@ -80,7 +80,7 @@ struct serialization_map serialization_map_create(void) {
 }
 
 static void serialization_map_entry_destroy(
-    struct serialization_map_entry* o) {
+    serialization_map_entry_t* o) {
     if (o->next) serialization_map_entry_destroy(o->next);
     o->pair.key = 0;
     o->pair.value = 0;
@@ -90,7 +90,7 @@ static void serialization_map_entry_destroy(
     }
 }
 
-void serialization_map_destroy(struct serialization_map* o) {
+void serialization_map_destroy(serialization_map_t* o) {
     for (size_t i = 0; i < SERIALIZATION_MAP_SIZE; i += 1) {
         if (o->entries[i].pair.key)
             serialization_map_entry_destroy(&o->entries[i]);

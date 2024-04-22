@@ -12,29 +12,18 @@
 #include "raylib.h"
 #include "selection.h"
 
-struct lines_vector {
-    struct line* data;
-    ulong size;
-    ulong capacity;
-};
-
-struct scroll {
+typedef struct {
     float horizontal;
     float vertical;
-};
-
-struct text_colors {
-    int foreground;
-    int syntax[token_kind_count_t];
-};
+} scroll_t;
 
 enum decoration_kind { decoration_selection, decoration_squiggly };
 
-struct decoration {
+typedef struct {
     enum decoration_kind kind;
-    struct selection* selections;
+    selection_t* selections;
     size_t selections_len;
-};
+} decoration_t;
 
 enum text_flags {
     text_flag_none = 0,
@@ -42,56 +31,47 @@ enum text_flags {
     text_flag_mouse_was_pressed = 0x2
 };
 
-struct text_view {
-    struct ff_glyphs_vector glyphs;
-    struct scroll scroll;
-    struct motion scroll_motion;
+typedef struct {
+    ff_glyph_vec_t glyphs;
+    scroll_t scroll;
+    motion_t scroll_motion;
     ulong mouse_press_start_line;
     ulong mouse_press_start_col;
-    struct buffer* buffer;
-    struct selection selection;
+    buffer_t* buffer;
+    selection_t selection;
     int text_flags;
-    struct cursor cursor;
-};
+    cursor_t cursor;
+} text_view_t;
 
-struct text_view text_view_create();
-void text_view_destroy(struct text_view* m);
-void text_view_update_glyphs(struct text_view* m,
-                             struct ff_typography typo,
+text_view_t text_view_create();
+void text_view_destroy(text_view_t* m);
+void text_view_update_glyphs(text_view_t* m, ff_typo_t typo,
                              Rectangle bounds);
-bool text_view_is_line_below_view(struct text_view* m,
-                                  struct ff_typography typo,
+bool text_view_is_line_below_view(text_view_t* m, ff_typo_t typo,
                                   Rectangle bounds, ulong line);
-bool text_view_is_line_above_view(struct text_view* m,
-                                  struct ff_typography typo,
+bool text_view_is_line_above_view(text_view_t* m, ff_typo_t typo,
                                   ulong line);
-void text_view_select(struct text_view* m, struct selection sel);
-int text_view_selection_is_invalid(struct text_view* m);
-ulong text_view_get_mouse_hover_line(struct text_view* m,
-                                     float font_size, Vector2 mouse,
-                                     float y_offset);
-ulong text_view_get_mouse_hover_col(struct text_view* m,
-                                    struct ff_typography typo,
+void text_view_select(text_view_t* m, selection_t sel);
+int text_view_selection_is_invalid(text_view_t* m);
+ulong text_view_get_mouse_hover_line(text_view_t* m, float font_size,
+                                     Vector2 mouse, float y_offset);
+ulong text_view_get_mouse_hover_col(text_view_t* m, ff_typo_t typo,
                                     Vector2 mouse, float x_offset,
                                     ulong hovering_line);
-void text_view_handle_mouse(struct text_view* m,
-                            struct ff_typography typo,
+void text_view_handle_mouse(text_view_t* m, ff_typo_t typo,
                             Rectangle bounds);
-void text_view_handle_cursor_scrolling(struct text_view* m,
-                                       struct ff_typography typo,
+void text_view_handle_cursor_scrolling(text_view_t* m, ff_typo_t typo,
                                        Rectangle bounds,
-                                       struct text_position curs_pos);
-void text_view_handle_wheel_scrolling(struct text_view* m,
-                                      struct ff_typography typo,
+                                       text_pos_t curs_pos);
+void text_view_handle_wheel_scrolling(text_view_t* m, ff_typo_t typo,
                                       Rectangle bounds);
-void text_view_draw(struct text_view* m, struct ff_typography typo,
-                    Rectangle bounds, int focus_flags,
-                    struct decoration* decorations,
-                    size_t decorations_len,
-                    struct error_link* error_links,
+void text_view_draw(text_view_t* m, ff_typo_t typo, Rectangle bounds,
+                    int focus_flags, decoration_t* decorations,
+                    size_t decorations_len, error_link_t* error_links,
                     size_t error_links_len);
-void text_view_draw_with_cursor(
-    struct text_view* m, struct ff_typography typo, Rectangle bounds,
-    struct text_position pos, bool cursor_moved, int focus_flags,
-    struct decoration* decorations, size_t decorations_len);
-void text_view_clear_selection(struct text_view* m);
+void text_view_draw_with_cursor(text_view_t* m, ff_typo_t typo,
+                                Rectangle bounds, text_pos_t pos,
+                                bool cursor_moved, int focus_flags,
+                                decoration_t* decorations,
+                                size_t decorations_len);
+void text_view_clear_selection(text_view_t* m);

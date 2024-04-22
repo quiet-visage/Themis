@@ -9,8 +9,8 @@
 #include "buffer_handler.h"
 #include "raylib.h"
 
-struct fuzzy_menu g_fuzzy_menu = {0};
-struct text_view g_text_preview = {0};
+fuzzy_menu_t g_fuzzy_menu = {0};
+text_view_t g_text_preview = {0};
 size_t g_previous_selected = 0;
 
 void buffer_picker_init(void) {
@@ -23,8 +23,8 @@ void buffer_picker_terminate(void) {
     text_view_destroy(&g_text_preview);
 }
 
-struct buffer_picker_dimensions {
-    struct fuzzy_menu_dimensions fz_menu_dimensions;
+typedef struct {
+    fuzzy_menu_dimensions_t fz_menu_dimensions;
 
     float buffer_preview_bg_x;
     float buffer_preview_bounds_x;
@@ -37,16 +37,16 @@ struct buffer_picker_dimensions {
 
     float buffer_preview_bg_height;
     float buffer_preview_bounds_height;
-};
+} buffer_picker_dimensions_t;
 
 #define BUFFER_PICKER_PREVIEW_HEIGHT_PERC 0.9f
 #define BUFFER_PICKER_PREVIEW_WIDTH_PERC 0.75f
 
-struct buffer_picker_dimensions buffer_picker_get_dimensions(
-    struct ff_typography typo) {
+buffer_picker_dimensions_t buffer_picker_get_dimensions(
+    ff_typo_t typo) {
     const Vector2 window_size = {.x = GetScreenWidth(),
                                  .y = GetScreenHeight()};
-    struct buffer_picker_dimensions result = {0};
+    buffer_picker_dimensions_t result = {0};
     result.fz_menu_dimensions =
         fuzzy_menu_get_dimensions(&g_fuzzy_menu, typo, window_size);
 
@@ -105,7 +105,7 @@ struct buffer_picker_dimensions buffer_picker_get_dimensions(
     return result;
 }
 
-struct buffer* buffer_picker_get_selected_buffer() {
+buffer_t* buffer_picker_get_selected_buffer() {
     size_t selected_name_len =
         g_fuzzy_menu.options[g_fuzzy_menu.selected].name_len;
     char selected_name[selected_name_len + 1];
@@ -126,7 +126,7 @@ void buffer_picker_update_options(void) {
     size_t buffer_count = buffer_handler_count();
     if (!buffer_count) return;
 
-    struct utf32_str buffer_names[buffer_count];
+    utf32_str_t buffer_names[buffer_count];
     for (size_t i = 0; i < buffer_count; i += 1) {
         buffer_names[i] = utf32_str_create();
     }
@@ -139,24 +139,21 @@ void buffer_picker_update_options(void) {
         utf32_str_destroy(&buffer_names[i]);
     }
 
-    struct buffer* selected_buffer =
-        buffer_picker_get_selected_buffer();
+    buffer_t* selected_buffer = buffer_picker_get_selected_buffer();
     assert(selected_buffer);
 
     g_text_preview.buffer = selected_buffer;
 }
 
-struct buffer* buffer_picker_ui(struct ff_typography typo,
-                                int focus_flags) {
-    struct buffer_picker_dimensions dimensions =
+buffer_t* buffer_picker_ui(ff_typo_t typo, int focus_flags) {
+    buffer_picker_dimensions_t dimensions =
         buffer_picker_get_dimensions(typo);
     fuzzy_menu_draw_editor(&g_fuzzy_menu, typo, focus_flags,
                            dimensions.fz_menu_dimensions);
     fuzzy_menu_draw_options(&g_fuzzy_menu, typo,
                             dimensions.fz_menu_dimensions);
 
-    struct buffer* selected_buffer =
-        buffer_picker_get_selected_buffer();
+    buffer_t* selected_buffer = buffer_picker_get_selected_buffer();
     assert(selected_buffer);
 
     if (fuzzy_menu_buffer_changed(&g_fuzzy_menu)) {

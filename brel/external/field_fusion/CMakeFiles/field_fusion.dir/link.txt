@@ -1,2 +1,0 @@
-/usr/bin/ar qc libfield_fusion.a CMakeFiles/field_fusion.dir/src/fieldfusion.c.o CMakeFiles/field_fusion.dir/src/serializer.c.o
-/usr/bin/ranlib libfield_fusion.a

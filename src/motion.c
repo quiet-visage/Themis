@@ -8,16 +8,15 @@ typedef unsigned long ulong;
 
 static const float pi = 3.14159265358979323846f;
 
-struct motion motion_new() {
-    struct motion result = {0};
+motion_t motion_new() {
+    motion_t result = {0};
     result.f = 1.0f;
     result.z = 0.5f;
     result.r = 2.0f;
     return result;
 }
 
-void motion_update(struct motion* m, float target[2],
-                   float delta_time) {
+void motion_update(motion_t* m, float target[2], float delta_time) {
     assert(m->f <= 6.0f);
 
     float k1 = m->z / (pi * m->f);

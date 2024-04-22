@@ -80,6 +80,9 @@ enum main_cmd {
     main_cmd_close,
     main_cmd_compile,
     main_cmd_compile_close,
+    main_cmd_compile_goto_next_error,
+    main_cmd_compile_goto_prev_error,
+    main_cmd_open_set_cmd_prompt,
     main_cmd_open_file_link,
     main_cmd_count
 };
@@ -100,12 +103,12 @@ enum file_editor_cmd {
     file_editor_cmd_save,
 };
 
-struct cmd_arg {
+typedef struct {
     int cmd;
     void* arg;
-};
+} cmd_arg_t;
 
 void cmd_arg_set(enum command_group group, int cmd, void* arg,
                  size_t arg_size);
-struct cmd_arg cmd_arg_get(enum command_group group);
-void cmd_arg_destroy(struct cmd_arg* m);
+cmd_arg_t cmd_arg_get(enum command_group group);
+void cmd_arg_destroy(cmd_arg_t* m);

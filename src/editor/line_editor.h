@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../text_view.h"
-#include "cursor_history.h"
 
 enum line_editor_flags {
     line_editor_flag_none = 0,
@@ -14,17 +13,16 @@ enum line_editor_mode {
     line_editor_mode_selection,
 };
 
-struct line_editor {
+typedef struct {
     size_t selection_begin;
-    struct text_position cursor;
-    struct text_view text;
+    text_pos_t cursor;
+    text_view_t text;
     int line_editor_flags;
     enum line_editor_mode line_editor_mode;
-};
+} line_editor_t;
 
-void line_editor_create(struct line_editor* m);
-void line_editor_clear(struct line_editor* m);
-void line_editor_destroy(struct line_editor* m);
-void line_editor_draw(struct line_editor* m,
-                      struct ff_typography typo, Rectangle bounds,
-                      int focus_flags);
+void line_editor_create(line_editor_t* m);
+void line_editor_clear(line_editor_t* m);
+void line_editor_destroy(line_editor_t* m);
+void line_editor_draw(line_editor_t* m, ff_typo_t typo,
+                      Rectangle bounds, int focus_flags);

@@ -17,8 +17,8 @@ void cursor_initialize(void) {
 
 void cursor_terminate(void) { UnloadShader(g_cursor_shader); }
 
-struct cursor cursor_new() {
-    struct cursor result = {0};
+cursor_t cursor_new() {
+    cursor_t result = {0};
     result.motion.f = 4.5f;
     result.motion.z = 1.0f;
     result.motion.r = -1.0f;
@@ -31,7 +31,7 @@ static inline float cursor_compute_phase(void) {
     return fabs(cosf(GetTime() * 2)) * .7f;
 }
 
-static void cursor_handle_alplha_change(struct cursor* this) {
+static void cursor_handle_alplha_change(cursor_t* this) {
     if (this->flags & cursor_flag_focused_t) {
         this->max_alpha = 0xff;
         this->alpha = this->max_alpha;
@@ -70,7 +70,7 @@ static void cursor_handle_alplha_change(struct cursor* this) {
     }
 }
 
-// static void draw_cursor_trail(struct cursor* this) {
+// static void draw_cursor_trail(cursor_t* this) {
 //     Vector2 top_vertex;
 //     Vector2 mid_vertex;
 //     Vector2 bot_vertex;
@@ -97,7 +97,7 @@ static void cursor_handle_alplha_change(struct cursor* this) {
 //     EndShaderMode();
 // }
 
-void cursor_draw(struct cursor* this, float x, float y) {
+void cursor_draw(cursor_t* this, float x, float y) {
     cursor_handle_alplha_change(this);
 
     motion_update(&this->motion, (float[2]){x, y}, GetFrameTime());

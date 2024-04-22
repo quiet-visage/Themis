@@ -10,19 +10,19 @@
 #define MAP_SIZE 0x800
 #define FILE_PREVIEW_PATH_CAP 0x100
 
-struct map_entry {
-    struct file_preview file_preview;
+typedef struct map_entry {
+    file_preview_t file_preview;
     struct map_entry* next;
     char key[FILE_PREVIEW_PATH_CAP];
-};
+} map_entry_t;
 
-struct map {
-    struct map_entry* entries;
-};
+typedef struct {
+    map_entry_t* entries;
+} map_t;
 
-static struct map file_preview_cache = {0};
+static map_t file_preview_cache = {0};
 
-void file_preview_create(struct file_preview* o, const char* path) {
+void file_preview_create(file_preview_t* o, const char* path) {
     buffer_create(&o->buffer, utf32_str_create());
     o->path_last_modified = GetFileModTime(path);
     o->text = text_view_create();
@@ -42,7 +42,7 @@ void file_preview_create(struct file_preview* o, const char* path) {
     }
 }
 
-static void file_preview_destroy(struct file_preview* fp) {
+static void file_preview_destroy(file_preview_t* fp) {
     text_view_destroy(&fp->text);
     buffer_destroy(&fp->buffer);
 }
@@ -62,12 +62,11 @@ static size_t path_key_hash(const char* path) {
     return hash;
 }
 
-static struct map map_create(void) {
-    return (struct map){
-        .entries = calloc(sizeof(struct map_entry), MAP_SIZE)};
+static map_t map_create(void) {
+    return (map_t){.entries = calloc(sizeof(map_entry_t), MAP_SIZE)};
 }
 
-static void map_entry_destroy(struct map_entry* entry) {
+static void map_entry_destroy(map_entry_t* entry) {
     entry->key[0] = 0;
     file_preview_destroy(&entry->file_preview);
     if (entry->next) {
@@ -77,18 +76,17 @@ static void map_entry_destroy(struct map_entry* entry) {
     }
 }
 
-static struct map_entry* map_ll_tail(struct map_entry* entry) {
+static map_entry_t* map_ll_tail(map_entry_t* entry) {
     assert(entry != NULL);
-    struct map_entry* result = entry;
+    map_entry_t* result = entry;
     while (result->next) result = result->next;
 
     return result;
 }
 
-static struct file_preview* map_get(struct map* map,
-                                    const char* path) {
+static file_preview_t* map_get(map_t* map, const char* path) {
     size_t slot = path_key_hash(path) % MAP_SIZE;
-    struct map_entry* entry = &map->entries[slot];
+    map_entry_t* entry = &map->entries[slot];
     while (entry) {
         if (!entry->key[0]) return NULL;
         if (strcmp(entry->key, path) == 0) {
@@ -111,8 +109,7 @@ static void map_assign_path_to_key(char* key, const char* path) {
     memcpy(key, path, path_len);
 }
 
-static struct map_entry* map_ll_find(struct map_entry* entry,
-                                     const char* key) {
+static map_entry_t* map_ll_find(map_entry_t* entry, const char* key) {
     assert(entry);
     size_t key_len = strlen(key);
     while (entry) {
@@ -122,10 +119,10 @@ static struct map_entry* map_ll_find(struct map_entry* entry,
     return NULL;
 }
 
-static void map_update_entry(struct map* o, const char* path) {
+static void map_update_entry(map_t* o, const char* path) {
     size_t slot = path_key_hash(path) % MAP_SIZE;
 
-    struct map_entry* entry = &o->entries[slot];
+    map_entry_t* entry = &o->entries[slot];
 
     if (!entry->key[0]) {
         map_assign_path_to_key(entry->key, path);
@@ -137,7 +134,7 @@ static void map_update_entry(struct map* o, const char* path) {
             buffer_read_file(&entry->file_preview.buffer, path);
         }
     } else {
-        struct map_entry* ll_entry = map_ll_find(entry, path);
+        map_entry_t* ll_entry = map_ll_find(entry, path);
 
         if (ll_entry) {
             long file_mod_time = GetFileModTime(path);
@@ -151,14 +148,14 @@ static void map_update_entry(struct map* o, const char* path) {
             return;
         }
 
-        struct map_entry* tail = map_ll_tail(entry);
-        tail->next = calloc(sizeof(struct map_entry), 1);
+        map_entry_t* tail = map_ll_tail(entry);
+        tail->next = calloc(sizeof(map_entry_t), 1);
         map_assign_path_to_key(tail->next->key, path);
         file_preview_create(&tail->next->file_preview, path);
     }
 }
 
-static void map_destroy(struct map* map) {
+static void map_destroy(map_t* map) {
     for (size_t i = 0; i < MAP_SIZE; i += 1) {
         if (!map->entries[i].key[0]) continue;
         map_entry_destroy(&map->entries[i]);
@@ -171,11 +168,11 @@ void preview_init(void) { file_preview_cache = map_create(); }
 
 void preview_terminate(void) { map_destroy(&file_preview_cache); }
 
-struct file_preview* get_preview(const char* path) {
+file_preview_t* get_preview(const char* path) {
     if (!IsPathFile(path)) return NULL;
 
     map_update_entry(&file_preview_cache, path);
-    struct file_preview* result = map_get(&file_preview_cache, path);
+    file_preview_t* result = map_get(&file_preview_cache, path);
     if (!result) return 0;
     return result;
 }

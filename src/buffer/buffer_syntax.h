@@ -4,14 +4,14 @@
 
 #include "../highlighter/highlighter.h"
 
-struct buffer_syntax {
-    struct highlighter highlighter;
-    struct tokens tokens;
-};
+typedef struct {
+    highlighter_t highlighter;
+    tokens_t tokens;
+} buffer_syntax_t;
 
-struct buffer_syntax buffer_syntax_create(void);
-void buffer_syntax_destroy(struct buffer_syntax* m);
-void buffer_syntax_set_language(struct buffer_syntax* m,
+buffer_syntax_t buffer_syntax_create(void);
+void buffer_syntax_destroy(buffer_syntax_t* m);
+void buffer_syntax_set_language(buffer_syntax_t* m,
                                 enum language language);
-void buffer_syntax_update(struct buffer_syntax* m, c32_t* buffer,
+void buffer_syntax_update(buffer_syntax_t* m, c32_t* buffer,
                           size_t buffer_len);

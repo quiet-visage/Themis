@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct utf8_str utf8_str_create(void) {
-    return (struct utf8_str){
+utf8_str_t utf8_str_create(void) {
+    return (utf8_str_t){
         .data = calloc(1, 2), .capacity = 2, .length = 0};
 }
 
-void utf8_str_destroy(struct utf8_str* this) { free(this->data); }
+void utf8_str_destroy(utf8_str_t* this) { free(this->data); }
 
-void utf8_str_copy(struct utf8_str* this, const char* buf,
+void utf8_str_copy(utf8_str_t* this, const char* buf,
                    size_t buf_len) {
     size_t required_cap = buf_len + 1;
 
@@ -24,4 +24,4 @@ void utf8_str_copy(struct utf8_str* this, const char* buf,
     memcpy(this->data, buf, buf_len);
 }
 
-void utf8_str_clear(struct utf8_str* this) { this->length = 0; }
+void utf8_str_clear(utf8_str_t* this) { this->length = 0; }

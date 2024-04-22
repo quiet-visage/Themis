@@ -11,17 +11,17 @@ enum cursor_flags {
     _cursor_flag_blink_t = (1 << 3),
 };
 
-struct cursor {
-    struct motion motion;
-    // struct motion smear_motion;
+typedef struct {
+    motion_t motion;
+    // motion_t smear_motion;
     float blink_duration_ms;
     float blink_delay_ms;
     unsigned char max_alpha;
     unsigned char alpha;
     unsigned char flags;
-};
+} cursor_t;
 
 void cursor_initialize(void);
 void cursor_terminate(void);
-struct cursor cursor_new(void);
-void cursor_draw(struct cursor* c, float x, float y);
+cursor_t cursor_new(void);
+void cursor_draw(cursor_t* c, float x, float y);

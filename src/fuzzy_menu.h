@@ -6,34 +6,25 @@
 #define FUZZY_MENU_OPTION_NAME_CAP 256
 #define FUZZY_MENU_OPTIONS_CAP 256
 
-struct fuzzy_menu_colors {
-    int menu_bg;
-    int editor_bg;
-    int editor_fg;
-    int option_fg;
-    int option_sel_fg;
-    int option_sel_bg;
-};
-
-struct fuzzy_menu_option {
+typedef struct {
     c32_t name[FUZZY_MENU_OPTION_NAME_CAP];
     uint edit_distance;
     size_t name_len;
     enum icon icon;
-};
+} fuzzy_menu_option_t;
 
-struct fuzzy_menu {
-    struct line_editor editor;
+typedef struct {
+    line_editor_t editor;
     float vertical_scroll;
-    struct ff_glyphs_vector glyphs;
+    ff_glyph_vec_t glyphs;
     size_t previous_buffer_size;
     size_t selected;
-    struct fuzzy_menu_option options[FUZZY_MENU_OPTIONS_CAP];
+    fuzzy_menu_option_t options[FUZZY_MENU_OPTIONS_CAP];
     size_t options_count;
-    struct motion motion;
-};
+    motion_t motion;
+} fuzzy_menu_t;
 
-struct fuzzy_menu_dimensions {
+typedef struct {
     float bg_x;
     float bg_width;
 
@@ -53,28 +44,25 @@ struct fuzzy_menu_dimensions {
 
     float options_height;
     float options_bg_height;
-};
+} fuzzy_menu_dimensions_t;
 
-void fuzzy_menu_create(struct fuzzy_menu *o);
-void fuzzy_menu_destroy(struct fuzzy_menu *fm);
-void fuzzy_menu_push_option(struct fuzzy_menu *fm,
-                            const c32_t *option, size_t len);
-void fuzzy_menu_push_option_with_icon(struct fuzzy_menu *fm,
+void fuzzy_menu_create(fuzzy_menu_t *o);
+void fuzzy_menu_destroy(fuzzy_menu_t *fm);
+void fuzzy_menu_push_option(fuzzy_menu_t *fm, const c32_t *option,
+                            size_t len);
+void fuzzy_menu_push_option_with_icon(fuzzy_menu_t *fm,
                                       const c32_t *option, size_t len,
                                       enum icon icon);
-void fuzzy_menu_reset(struct fuzzy_menu *fm);
-void fuzzy_menu_sel_next(struct fuzzy_menu *fm);
-void fuzzy_menu_sel_prev(struct fuzzy_menu *fm);
-struct fuzzy_menu_dimensions fuzzy_menu_get_dimensions(
-    struct fuzzy_menu *fm, struct ff_typography typo,
-    Vector2 window_size);
-const c32_t *fuzzy_menu_handle_user_input(struct fuzzy_menu *fm);
-bool fuzzy_menu_buffer_changed(struct fuzzy_menu *fm);
-void fuzzy_menu_on_buffer_change(struct fuzzy_menu *fm);
-void fuzzy_menu_draw_options(struct fuzzy_menu *fm,
-                             struct ff_typography typo,
-                             struct fuzzy_menu_dimensions dimensions);
-void fuzzy_menu_draw_editor(struct fuzzy_menu *fm,
-                            struct ff_typography typo,
+void fuzzy_menu_reset(fuzzy_menu_t *fm);
+void fuzzy_menu_sel_next(fuzzy_menu_t *fm);
+void fuzzy_menu_sel_prev(fuzzy_menu_t *fm);
+fuzzy_menu_dimensions_t fuzzy_menu_get_dimensions(
+    fuzzy_menu_t *fm, ff_typo_t typo, Vector2 window_size);
+const c32_t *fuzzy_menu_handle_user_input(fuzzy_menu_t *fm);
+bool fuzzy_menu_buffer_changed(fuzzy_menu_t *fm);
+void fuzzy_menu_on_buffer_change(fuzzy_menu_t *fm);
+void fuzzy_menu_draw_options(fuzzy_menu_t *fm, ff_typo_t typo,
+                             fuzzy_menu_dimensions_t dimensions);
+void fuzzy_menu_draw_editor(fuzzy_menu_t *fm, ff_typo_t typo,
                             int focus_flags,
-                            struct fuzzy_menu_dimensions dimensions);
+                            fuzzy_menu_dimensions_t dimensions);

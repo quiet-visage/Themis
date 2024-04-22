@@ -18,11 +18,11 @@
 
 #define FILE_EDITOR_CAP 32
 
-struct file_editor g_file_editors[FILE_EDITOR_CAP] = {0};
+file_editor_t g_file_editors[FILE_EDITOR_CAP] = {0};
 size_t g_file_editors_count = 0;
 static size_t g_focused_num = 0;
 
-struct file_editor* pane_controller_get_focused(void) {
+file_editor_t* pane_controller_get_focused(void) {
     return &g_file_editors[g_focused_num];
 }
 
@@ -34,7 +34,7 @@ void pane_controller_update_bounds(Rectangle bounds) {
 void pane_controller_init(Rectangle bounds) {
     pane_controller_update_bounds(bounds);
     file_editor_create(&g_file_editors[g_file_editors_count++]);
-    struct buffer* scratch_buffer = buffer_handler_get("[scratch]");
+    buffer_t* scratch_buffer = buffer_handler_get("[scratch]");
     assert(scratch_buffer &&
            "scratch buffer should be created on buffer_handler_init");
     g_file_editors[g_file_editors_count - 1].editor.text.buffer =
@@ -45,9 +45,9 @@ static void pane_controller_split(enum split_kind split_kind) {
     assert(g_focused_num < tile_get_count());
     bool success = tile_split(split_kind, g_focused_num);
     if (!success) return;
-    struct file_editor* old_file_editor =
+    file_editor_t* old_file_editor =
         &g_file_editors[g_file_editors_count - 1];
-    struct file_editor* new_file_editor =
+    file_editor_t* new_file_editor =
         &g_file_editors[g_file_editors_count++];
     file_editor_create(new_file_editor);
 
@@ -101,7 +101,7 @@ static void pane_controller_close_focused(void) {
     memmove(&g_file_editors[g_focused_num],
             &g_file_editors[g_focused_num + 1],
             (g_file_editors_count - (g_focused_num + 1)) *
-                sizeof(struct file_editor));
+                sizeof(file_editor_t));
 
     pane_controller_focus_prev();
     tile_remove(g_focused_num);
@@ -129,7 +129,7 @@ void (*g_pane_cmd_table[])(void) = {
     [pane_cmd_focus_right] = pane_controller_focus_right,
 };
 
-void pane_controler_draw(struct ff_typography typo, int focus_flags) {
+void pane_controler_draw(ff_typo_t typo, int focus_flags) {
     assert(g_file_editors_count == tile_get_count());
 
     if (focus_flags & focus_flag_can_interact) {
@@ -162,7 +162,7 @@ void pane_controler_draw(struct ff_typography typo, int focus_flags) {
 
 void pane_controller_open_in_focused(const char* file_name) {
     assert(g_focused_num < g_file_editors_count);
-    struct file_editor* focused = &g_file_editors[g_focused_num];
+    file_editor_t* focused = &g_file_editors[g_focused_num];
     editor_reset_mode(&focused->editor);
     file_editor_open(focused, file_name);
 }
@@ -174,13 +174,13 @@ void pane_controller_terminate(void) {
     }
 }
 
-void pane_controller_set_focused_buffer(struct buffer* buffer) {
+void pane_controller_set_focused_buffer(buffer_t* buffer) {
     assert(buffer);
-    struct file_editor* focused_file_editor =
+    file_editor_t* focused_file_editor =
         pane_controller_get_focused();
     focused_file_editor->editor.text.buffer = buffer;
 
     memset(&focused_file_editor->editor.cursor, 0,
-           sizeof(struct text_position));
+           sizeof(text_pos_t));
     file_editor_set_path(focused_file_editor, buffer->buffer_name);
 }

@@ -7,8 +7,8 @@
 
 void pane_controller_init(Rectangle bounds);
 void pane_controller_update_bounds(Rectangle bounds);
-void pane_controler_draw(struct ff_typography typo, int focus_flags);
+void pane_controler_draw(ff_typo_t typo, int focus_flags);
 void pane_controller_open_in_focused(const char* file_name);
 void pane_controller_terminate(void);
-void pane_controller_set_focused_buffer(struct buffer* buffer);
-struct file_editor* pane_controller_get_focused(void);
+void pane_controller_set_focused_buffer(buffer_t* buffer);
+file_editor_t* pane_controller_get_focused(void);

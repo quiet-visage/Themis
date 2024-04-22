@@ -5,8 +5,6 @@
 #include <math.h>
 #include <stdbool.h>
 
-#include "freetype/freetype.h"
-
 const float g_serializer_scale = 64;
 
 enum ff_serializer_color_t {
@@ -222,7 +220,7 @@ int ff_serializer_serialize_glyph(FT_Face face, int code,
                                   float *point_buffer) {
     if (FT_Load_Char(face, code, FT_LOAD_NO_SCALE)) return -1;
 
-    FT_Outline_Funcs fns = {0};
+    FT_Outline_Funcs fns;
     fns.shift = 0;
     fns.delta = 0;
     fns.move_to = ff_serializer_add_contour;
@@ -230,7 +228,7 @@ int ff_serializer_serialize_glyph(FT_Face face, int code,
     fns.conic_to = ff_serializer_add_quad;
     fns.cubic_to = 0;
 
-    struct glyph_data_ctx ctx = {0};
+    struct glyph_data_ctx ctx;
     ctx.meta_buffer = meta_buffer;
     ctx.meta_index = 1;
     ctx.meta_buffer[0] = 0;
@@ -321,7 +319,7 @@ int ff_serializer_serialize_glyph(FT_Face face, int code,
     meta_index = 0;
     point_ptr = (struct vec2 *)&point_buffer[0];
 
-    int corners[64];  // NOTE: if there's stack smashing check here
+    int corners[64]; // NOTE: if stack smashing detected this is probably the cause 
     int len_corners = 0;
 
     ncontours = meta_buffer[meta_index++];
