@@ -6,6 +6,10 @@
 #include "buffer_lines.h"
 #include "buffer_syntax.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define BUFFER_NAME_CAP 0x100
 
 typedef struct {
@@ -36,3 +40,7 @@ void buffer_copy(buffer_t* m, c32_t* buffer, size_t len);
 void buffer_copy_utf8(buffer_t* m, const char* buffer, size_t len);
 void buffer_append_utf8(buffer_t* m, const char* buffer, size_t len);
 void buffer_read_file(buffer_t* m, const char* path);
+
+#ifdef __cplusplus
+}
+#endif

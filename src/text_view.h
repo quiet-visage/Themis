@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <fieldfusion.h>
 #include <raylib.h>
 #include <sys/types.h>
@@ -75,3 +79,7 @@ void text_view_draw_with_cursor(text_view_t* m, ff_typo_t typo,
                                 decoration_t* decorations,
                                 size_t decorations_len);
 void text_view_clear_selection(text_view_t* m);
+
+#ifdef __cplusplus
+}
+#endif

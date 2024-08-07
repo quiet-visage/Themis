@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "editor/line_editor.h"
 #include "resources/resources.h"
 
@@ -66,3 +70,7 @@ void fuzzy_menu_draw_options(fuzzy_menu_t *fm, ff_typo_t typo,
 void fuzzy_menu_draw_editor(fuzzy_menu_t *fm, ff_typo_t typo,
                             int focus_flags,
                             fuzzy_menu_dimensions_t dimensions);
+
+#ifdef __cplusplus
+}
+#endif

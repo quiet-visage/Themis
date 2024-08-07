@@ -1,4 +1,8 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <raylib.h>
 #include <stddef.h>
 
@@ -14,3 +18,7 @@ void resources_init(void);
 char* resource_file_load(const char* name);
 void resource_file_free(char* file);
 Texture get_icon(enum icon icon);
+
+#ifdef __cplusplus
+}
+#endif

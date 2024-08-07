@@ -35,11 +35,26 @@ void resources_init(void) {
                g_icon_path[i], strlen(g_icon_path[i]));
         assert(FileExists(icon_path));
 
-        printf("%s\n", icon_path);
+        /*
+        NOTE: null terminating the svg file is
+        necessary in order to fix raylib's heap
+        buffer overflow
+         */
+        FILE* file = fopen(icon_path, "r");
+        assert(file);
+        fseek(file, SEEK_END, 0);
+        size_t file_size = ftell(file);
+        rewind(file);
+        char* file_str = calloc(file_size + 1, 1);
+        fread(file_str, 1, file_size, file);
+        fclose(file);
+
         Image icon_image =
-            LoadImageSvg(icon_path, ICON_SIZE, ICON_SIZE);
+            LoadImageSvg(file_str, ICON_SIZE, ICON_SIZE);
         ImageColorInvert(&icon_image);
         g_icons[i] = LoadTextureFromImage(icon_image);
+
+        free(file_str);
         UnloadImage(icon_image);
 
         icon_path[g_resources_dir_path_len + 1] = 0;

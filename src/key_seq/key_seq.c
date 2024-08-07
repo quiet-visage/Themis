@@ -85,10 +85,10 @@ sequence_association_t* key_seq_handler_find_captured_association(
     return 0;
 }
 
-void key_seq_handler_register_association(
-    seq_group_id_t seq_group_id, size_t sequence_len,
-    key_combination_t sequence[sequence_len],
-    int associated_command) {
+void key_seq_handler_register_association(seq_group_id_t seq_group_id,
+                                          size_t sequence_len,
+                                          key_combination_t* sequence,
+                                          int associated_command) {
     assert(seq_group_id < g_groups_len);
     sequence_association_t* parent = g_groups[seq_group_id];
 

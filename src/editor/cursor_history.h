@@ -1,4 +1,9 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "../highlighter/highlighter.h"
 
 typedef struct {
@@ -12,3 +17,8 @@ void cursor_history_destroy(cursor_history_t* o);
 void cursor_history_push(cursor_history_t* o, text_pos_t cursor);
 void cursor_history_pop(cursor_history_t* o);
 text_pos_t cursor_history_top(cursor_history_t* o);
+
+#ifdef __cplusplus
+}
+#endif
+

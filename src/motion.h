@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     float f;
     float z;
@@ -12,3 +16,7 @@ typedef struct {
 
 motion_t motion_new();
 void motion_update(motion_t* m, float target[2], float delta_time);
+
+#ifdef __cplusplus
+}
+#endif

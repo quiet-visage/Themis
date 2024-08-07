@@ -1,4 +1,10 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <fieldfusion.h>
 #include <stddef.h>
 
@@ -21,3 +27,7 @@ void buffer_lines_destroy(buffer_lines_t* m);
 void buffer_lines_clear(buffer_lines_t* m);
 void buffer_lines_update(buffer_lines_t* m, const c32_t* str,
                          const size_t str_len);
+
+#ifdef __cplusplus
+}
+#endif

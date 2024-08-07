@@ -1,22 +1,28 @@
 cmake_minimum_required(VERSION 3.5)
-set(CMAKE_CXX_COMPILER gcc)
 
-project(themis C)
+project(themis)
+set(${project} LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_C_FLAGS_SANITIZE
-    ${CMAKE_C_FLAGS_DEBUG}
-    CACHE STRING "Flags used by the C compiler during sanitize builds." FORCE)
+    "-O0 -fsanitize=address")
+set(CMAKE_CXX_FLAGS_SANITIZE
+    "-O0 -fsanitize=address")
 set(CMAKE_EXE_LINKER_FLAGS_SANITIZE
-    ${CMAKE_EXE_LINKER_FLAGS_DEBUG}
-    CACHE STRING "Flags used for linking binaries during sanitize builds."
-          FORCE)
-set(CMAKE_C_FLAGS_PROFILE
-    "-O2 -pg"
-    CACHE STRING "Flags used by the C compiler during sanitize builds." FORCE)
+    "-fsanitize=address")
+
+set(CMAKE_CXX_FLAGS_PROFILE
+    "-O2 -pg")
 set(CMAKE_EXE_LINKER_FLAGS_PROFILE
-    "-pg"
-    CACHE STRING "Flags used for linking binaries during sanitize builds."
-          FORCE)
+    "-pg")
+
+mark_as_advanced(
+  CMAKE_CXX_FLAGS_SANITIZE
+  CMAKE_EXE_LINKER_FLAGS_SANITIZE
+  CMAKE_CXX_FLAGS_PROFILE
+  CMAKE_EXE_LINKER_FLAGS_PROFILE
+)
 
 message(
   "* build type options are : None Debug Release RelWithDebInfo MinSizeRel Sanitize Profile"
@@ -27,7 +33,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 message("* build type is : ${CMAKE_BUILD_TYPE}")
-file(GLOB_RECURSE SRCS "src/*.c" "src/*.h" "src/*/*.h" "src/*/*.c")
+file(GLOB_RECURSE SRCS "src/*.c" "src/*.h" "src/*/*.h" "src/*/*.c" "src/*.cc" "src/*.hh")
 add_executable(themis ${SRCS})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Sanitize")
@@ -44,7 +50,7 @@ add_subdirectory(external/field_fusion)
 target_link_libraries(themis PRIVATE field_fusion -lmagic)
 
 set(PLATFORM Desktop)
-set(GRAPHICS GRAPHICS_API_OPENGL_43)
+set(GRAPHICS GRAPHICS_API_OPENGL_33)
 option(BUILD_EXAMPLES OFF)
 option(CUSTOMIZE_BUILD ON)
 option(SUPPORT_FILEFORMAT_SVG ON)

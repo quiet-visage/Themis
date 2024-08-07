@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <raylib.h>
 #include <stddef.h>
 
@@ -17,3 +21,7 @@ size_t tile_get_right_of(size_t n);
 size_t tile_get_left_of(size_t n);
 size_t tile_get_up_of(size_t n);
 size_t tile_get_down_of(size_t n);
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "tree_sitter/api.h"
 
 typedef unsigned long ulong;
@@ -85,3 +89,7 @@ enum language hlr_get_extension_language(const char* dot_ext);
 tokens_t hlr_tokens_create();
 void hlr_tokens_destroy(tokens_t* m);
 void hlr_tokens_update(highlighter_t* m, tokens_t* ts);
+
+#ifdef __cplusplus
+}
+#endif

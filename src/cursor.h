@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <sys/types.h>
 
 #include "motion.h"
@@ -25,3 +29,7 @@ void cursor_initialize(void);
 void cursor_terminate(void);
 cursor_t cursor_new(void);
 void cursor_draw(cursor_t* c, float x, float y);
+
+#ifdef __cplusplus
+}
+#endif

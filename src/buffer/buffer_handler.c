@@ -128,8 +128,7 @@ void buffer_handler_terminate(void) {
 
 size_t buffer_handler_count(void) { return g_buffer_map.length; }
 
-void buffer_handler_list_names(size_t count,
-                               utf32_str_t names[count]) {
+void buffer_handler_list_names(size_t count, utf32_str_t* names) {
     assert(count <= g_buffer_map.length);
 
     size_t name_idx = 0;

@@ -151,56 +151,6 @@ file_picker_dimensions_t file_picker_get_dimensions(file_picker_t* fp,
     return result;
 }
 
-static void file_picker_draw_preview(
-    file_picker_t* fp, ff_typo_t typo,
-    file_picker_dimensions_t dimensions, int focus_flags) {
-    const c32_t* selected = fp->menu.options[fp->menu.selected].name;
-
-    size_t selected_len =
-        fp->menu.options[fp->menu.selected].name_len;
-    size_t dir_path_len = strlen(fp->dir);
-    size_t selected_file_path_len = dir_path_len + 1 + selected_len;
-
-    char selected_file_path[selected_file_path_len + 1];
-    selected_file_path[selected_file_path_len] = 0;
-
-    assert(dir_path_len + 1 + selected_len < 256);
-    memcpy(selected_file_path, fp->dir, dir_path_len);
-    memcpy(&selected_file_path[dir_path_len], "/", 1);
-
-    char selected_utf8[selected_len + 1];
-    selected_utf8[selected_len] = 0;
-    (void)ff_utf32_to_utf8(selected_utf8, selected, selected_len);
-    memcpy(&selected_file_path[dir_path_len + 1], selected_utf8,
-           selected_len);
-
-    Rectangle file_preview_bg = {
-        .x = dimensions.file_preview_bg_x,
-        .y = dimensions.file_preview_bg_y,
-        .width = dimensions.file_preview_bg_width,
-        .height = dimensions.file_preview_bg_height};
-
-    DrawRectangleRec(file_preview_bg,
-                     GetColor(g_cfg.color_scheme.surface1_bg));
-    if (IsPathFile(selected_file_path)) {
-        file_preview_t* preview = get_preview(selected_file_path);
-        if (!preview) return;
-
-        Rectangle file_preview_bounds = {
-            .x = dimensions.file_preview_bounds_x,
-            .y = dimensions.file_preview_bounds_y,
-            .width = dimensions.file_preview_bounds_width,
-            .height = dimensions.file_preview_bounds_height};
-
-        BeginScissorMode(file_preview_bounds.x, file_preview_bounds.y,
-                         file_preview_bounds.width,
-                         file_preview_bounds.height);
-        text_view_draw(&preview->text, typo, file_preview_bounds,
-                       focus_flags, 0, 0, 0, 0);
-        EndScissorMode();
-    }
-}
-
 const char* file_picker_ui(file_picker_t* fp, ff_typo_t typo,
                            int focus_flags) {
     file_picker_dimensions_t dimensions =

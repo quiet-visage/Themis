@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h>
 
 #include "../dyn_strings/utf32_string.h"
@@ -24,3 +28,7 @@ void buffer_history_copy_and_push(buffer_history_t* i,
 void buffer_history_pop(buffer_history_t* m);
 void buffer_history_clear(buffer_history_t* m);
 buffer_history_item_t* buffer_history_top(buffer_history_t* m);
+
+#ifdef __cplusplus
+}
+#endif

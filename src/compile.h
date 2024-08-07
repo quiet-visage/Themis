@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <fieldfusion.h>
 #include <raylib.h>
 #include <stddef.h>
@@ -12,3 +16,7 @@ void compile_spawn();
 void compile_jmp_next_err();
 void compile_jmp_prev_err();
 void compile_kill();
+
+#ifdef __cplusplus
+}
+#endif

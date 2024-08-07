@@ -1,3 +1,4 @@
+
 #include "utf32_string.h"
 
 #include <assert.h>
@@ -182,3 +183,4 @@ c32_t* str32str32(const c32_t* substr, size_t substr_len,
 
     return 0;
 }
+

@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h>
 enum command_group {
     command_group_editor,
@@ -112,3 +116,7 @@ void cmd_arg_set(enum command_group group, int cmd, void* arg,
                  size_t arg_size);
 cmd_arg_t cmd_arg_get(enum command_group group);
 void cmd_arg_destroy(cmd_arg_t* m);
+
+#ifdef __cplusplus
+}
+#endif

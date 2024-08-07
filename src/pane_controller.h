@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <raylib.h>
 
 #include "fieldfusion.h"
@@ -12,3 +16,7 @@ void pane_controller_open_in_focused(const char* file_name);
 void pane_controller_terminate(void);
 void pane_controller_set_focused_buffer(buffer_t* buffer);
 file_editor_t* pane_controller_get_focused(void);
+
+#ifdef __cplusplus
+}
+#endif

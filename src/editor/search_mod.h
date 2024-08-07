@@ -1,5 +1,9 @@
 #include "line_editor.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     selection_t* data;
     size_t length;
@@ -25,3 +29,7 @@ selection_t* search_mod_get_selected_match(search_mod_t* m);
 void search_mod_find(search_mod_t* m, buffer_t* buffer);
 void search_mod_draw(search_mod_t* m, ff_typo_t typo,
                      Rectangle outer_bounds, int focus_flags);
+
+#ifdef __cplusplus
+}
+#endif

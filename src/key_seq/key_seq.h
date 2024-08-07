@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #define KEY_SEQUENCE_LIMIT 3
 
@@ -21,7 +25,12 @@ void key_seq_handler_end_frame(void);
 
 seq_group_id_t key_seq_handler_create_group(void);
 int key_seq_handler_get_command(seq_group_id_t seq_group_id);
-void key_seq_handler_register_association(
-    seq_group_id_t seq_group_id, size_t sequence_len,
-    key_combination_t sequence[sequence_len], int associated_command);
+void key_seq_handler_register_association(seq_group_id_t seq_group_id,
+                                          size_t sequence_len,
+                                          key_combination_t* sequence,
+                                          int associated_command);
 bool key_seq_handler_key_seq_active(void);
+
+#ifdef __cplusplus
+}
+#endif

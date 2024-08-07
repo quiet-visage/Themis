@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "../text_view.h"
 
 enum line_editor_flags {
@@ -26,3 +30,7 @@ void line_editor_clear(line_editor_t* m);
 void line_editor_destroy(line_editor_t* m);
 void line_editor_draw(line_editor_t* m, ff_typo_t typo,
                       Rectangle bounds, int focus_flags);
+
+#ifdef __cplusplus
+}
+#endif

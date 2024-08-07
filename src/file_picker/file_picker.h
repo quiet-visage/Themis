@@ -1,4 +1,8 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "../fuzzy_menu.h"
 
 typedef struct {
@@ -11,3 +15,7 @@ file_picker_t file_picker_create();
 const char* file_picker_ui(file_picker_t* fp, ff_typo_t typo,
                            int focus_flags);
 void file_picker_destroy(file_picker_t* fp);
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <raylib.h>
 
 #include "fieldfusion.h"
@@ -58,3 +61,7 @@ typedef struct {
 extern config_t g_cfg;
 
 void config_init(void);
+
+#ifdef __cplusplus
+}
+#endif

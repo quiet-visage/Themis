@@ -1,4 +1,8 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stddef.h>
 
 #define SEQUENCE_ASSOCIATION_CHILD_LIMIT 64
@@ -20,3 +24,7 @@ sequence_association_t* sequence_association_create(void);
 void sequence_association_destroy(sequence_association_t* m);
 void sequence_association_push(sequence_association_t* m,
                                sequence_association_t* seq);
+
+#ifdef __cplusplus
+}
+#endif

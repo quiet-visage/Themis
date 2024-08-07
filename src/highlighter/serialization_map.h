@@ -1,4 +1,8 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stddef.h>
 
 typedef struct {
@@ -21,3 +25,7 @@ void serialization_map_set(serialization_map_t *o, const char *key,
 int serialization_map_get(serialization_map_t *o, const char *key,
                           size_t key_len);
 void serialization_map_destroy(serialization_map_t *o);
+
+#ifdef __cplusplus
+}
+#endif

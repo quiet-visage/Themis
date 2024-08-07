@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "GLFW/glfw3.h"
 
 void key_callback(GLFWwindow *window, int key, int scancode,
@@ -11,3 +15,7 @@ int get_char(void);
 int is_key_down(int key);
 void kb_end_frame(void);
 int is_key_sticky(int key);
+
+#ifdef __cplusplus
+}
+#endif

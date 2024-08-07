@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "../highlighter/highlighter.h"
 #include "../text_view.h"
 #include "search_mod.h"
@@ -34,3 +38,7 @@ void editor_draw(editor_t* m, ff_typo_t typo, Rectangle bounds,
 void editor_reset_mode(editor_t* m);
 void editor_move_cursor(editor_t* m, size_t row, size_t col);
 void editor_clear(editor_t* m);
+
+#ifdef __cplusplus
+}
+#endif
