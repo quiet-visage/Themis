@@ -36,8 +36,11 @@ $ git clone https://github.com/quiet-visage/themis
 # Go into the repository
 $ cd themis
 
+# Create build directory
+$ mkdir -p build
+
 # Generate build files
-$ mkdir -p build; cmake ..
+$ cd build; cmake ..
 
 # Compile
 $ make -j8
