@@ -18,6 +18,12 @@ set(CMAKE_EXE_LINKER_FLAGS_PROFILE
     CACHE STRING "Flags used for linking binaries during sanitize builds."
           FORCE)
 
+mark_as_advanced(
+    CMAKE_C_FLAGS_SANITIZE
+    CMAKE_C_FLAGS_PROFILE
+    CMAKE_EXE_LINKER_FLAGS_SANITIZE
+    CMAKE_EXE_LINKER_FLAGS_PROFILE)
+
 message(
   "* build type options are : None Debug Release RelWithDebInfo MinSizeRel Sanitize Profile"
 )
