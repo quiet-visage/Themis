@@ -1,14 +1,14 @@
 
 
 <h1 align="center">
-  <br>
-  <a href="icon"><img src="" alt="icon" width="200"></a>
-  <br>
+
+  ![drawing-1](https://github.com/user-attachments/assets/269cae95-b10c-4343-a973-be06e23c3679)
+
   Themis
   <br>
 </h1>
 
-<h4 align="center">A flexible IDE built with C++ and Raylib</h4>
+<h4 align="center">A flexible IDE built with C and Raylib</h4>
 
 <p align="center">
   <a href="#features">Features</a> •
