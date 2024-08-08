@@ -44,7 +44,7 @@ add_subdirectory(external/field_fusion)
 target_link_libraries(themis PRIVATE field_fusion -lmagic)
 
 set(PLATFORM Desktop)
-set(GRAPHICS GRAPHICS_API_OPENGL_43)
+set(GRAPHICS GRAPHICS_API_OPENGL_33)
 option(BUILD_EXAMPLES OFF)
 option(CUSTOMIZE_BUILD ON)
 option(SUPPORT_FILEFORMAT_SVG ON)
