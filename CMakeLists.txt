@@ -22,18 +22,8 @@ message(
   "* build type options are : None Debug Release RelWithDebInfo MinSizeRel Sanitize Profile"
 )
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug)
-endif()
-
-message("* build type is : ${CMAKE_BUILD_TYPE}")
 file(GLOB_RECURSE SRCS "src/*.c" "src/*.h" "src/*/*.h" "src/*/*.c")
 add_executable(themis ${SRCS})
-
-if(CMAKE_BUILD_TYPE STREQUAL "Sanitize")
-  target_compile_options(themis PRIVATE -O0 -g3 -fsanitize=address)
-  target_link_options(themis PRIVATE -fsanitize=address)
-endif()
 
 set_property(TARGET themis PROPERTY C_STANDARD 11)
 # target_compile_options(themis PRIVATE -Werror)
